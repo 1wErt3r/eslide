@@ -20,7 +20,7 @@ static int _log_domain = -1;
 static Eina_Bool is_fullscreen = EINA_FALSE;
 static Evas_Object *slideshow_image = NULL;
 static Evas_Object *slideshow_video = NULL;
-static Evas_Object *media_container = NULL;
+static Evas_Object *letterbox_bg = NULL;
 static Evas_Object *button_box = NULL;
 static Ecore_Timer *slideshow_timer = NULL;
 static Eina_List *media_files = NULL;
@@ -139,22 +139,24 @@ show_next_media(void)
    {
       if (is_image_file(media_path))
       {
-         // Show image
+         // Show image in letterbox
          if (slideshow_video) evas_object_hide(slideshow_video);
          if (slideshow_image)
          {
             elm_image_file_set(slideshow_image, media_path, NULL);
+            elm_object_content_set(letterbox_bg, slideshow_image);
             evas_object_show(slideshow_image);
             INF("Showing image: %s", media_path);
          }
       }
       else if (is_video_file(media_path))
       {
-         // Show video
+         // Show video in letterbox
          if (slideshow_image) evas_object_hide(slideshow_image);
          if (slideshow_video)
          {
             elm_video_file_set(slideshow_video, media_path);
+            elm_object_content_set(letterbox_bg, slideshow_video);
             elm_video_play(slideshow_video);
             evas_object_show(slideshow_video);
             INF("Showing video: %s", media_path);
@@ -321,25 +323,35 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
    elm_box_pack_end(box, label);
    evas_object_show(label);
 
-   // Create image widget for slideshow
-   slideshow_image = elm_image_add(win);
-   elm_image_aspect_fixed_set(slideshow_image, EINA_FALSE);
-   elm_image_fill_outside_set(slideshow_image, EINA_FALSE);
+   // Create letterbox background container
+   letterbox_bg = elm_bg_add(win);
+   elm_bg_color_set(letterbox_bg, 0, 0, 0);  // Black background for letterbox effect
+   evas_object_size_hint_weight_set(letterbox_bg, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+   evas_object_size_hint_align_set(letterbox_bg, EVAS_HINT_FILL, EVAS_HINT_FILL);
+   evas_object_smart_callback_add(letterbox_bg, "clicked", on_media_click, NULL);
+   elm_box_pack_end(box, letterbox_bg);
+   evas_object_show(letterbox_bg);
+
+   // Create image widget for slideshow with letterbox effect
+   slideshow_image = elm_image_add(letterbox_bg);
+   elm_image_aspect_fixed_set(slideshow_image, EINA_TRUE);  // Maintain aspect ratio
+   elm_image_fill_outside_set(slideshow_image, EINA_FALSE);  // Don't fill outside bounds
    elm_image_resizable_set(slideshow_image, EINA_TRUE, EINA_TRUE);
    elm_image_smooth_set(slideshow_image, EINA_TRUE);
    evas_object_size_hint_weight_set(slideshow_image, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
-   evas_object_size_hint_align_set(slideshow_image, EVAS_HINT_FILL, EVAS_HINT_FILL);
+   evas_object_size_hint_align_set(slideshow_image, 0.5, 0.5);  // Center the image
    evas_object_smart_callback_add(slideshow_image, "clicked", on_media_click, NULL);
-   elm_box_pack_end(box, slideshow_image);
+   
+   // Set the image as the background's content
+   elm_object_content_set(letterbox_bg, slideshow_image);
    evas_object_show(slideshow_image);
 
-   // Create video widget for slideshow
-   slideshow_video = elm_video_add(win);
+   // Create video widget for slideshow (will be shown in the same letterbox container)
+   slideshow_video = elm_video_add(letterbox_bg);
    elm_video_remember_position_set(slideshow_video, EINA_FALSE);
    evas_object_size_hint_weight_set(slideshow_video, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
-   evas_object_size_hint_align_set(slideshow_video, EVAS_HINT_FILL, EVAS_HINT_FILL);
+   evas_object_size_hint_align_set(slideshow_video, 0.5, 0.5);  // Center the video
    evas_object_smart_callback_add(slideshow_video, "clicked", on_media_click, NULL);
-   elm_box_pack_end(box, slideshow_video);
    evas_object_hide(slideshow_video);  // Initially hidden
 
    // Create horizontal box for control buttons
