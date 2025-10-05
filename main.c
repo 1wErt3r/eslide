@@ -37,6 +37,10 @@ static Eina_Bool slideshow_running = EINA_TRUE;
 static Eina_Bool controls_visible = EINA_FALSE;
 static Eina_Bool is_shuffle_mode = EINA_FALSE;  // Default to sequential mode
 
+// Digital clock variables
+static Evas_Object *clock_label = NULL;
+static Ecore_Timer *clock_timer = NULL;
+
 // Fade transition variables
 static Ecore_Animator *fade_animator = NULL;
 static Eina_Bool is_fading = EINA_FALSE;
@@ -404,6 +408,35 @@ slideshow_timer_cb(void *data EINA_UNUSED)
    return ECORE_CALLBACK_RENEW;  // Keep the timer running
 }
 
+// Timer callback for digital clock updates
+static Eina_Bool
+clock_timer_cb(void *data EINA_UNUSED)
+{
+   time_t current_time;
+   struct tm *time_info;
+   char time_string[6];  // HH:MM format + null terminator
+   char formatted_time[100];  // Buffer for HTML formatted time
+   
+   // Get current time
+   time(&current_time);
+   time_info = localtime(&current_time);
+   
+   // Format time as HH:MM
+   strftime(time_string, sizeof(time_string), "%H:%M", time_info);
+   
+   // Create HTML formatted string with larger font and white color
+   snprintf(formatted_time, sizeof(formatted_time), 
+            "<font_size=24><color=#FFFFFF><b>%s</b></color></font_size>", time_string);
+   
+   // Update clock label
+   if (clock_label)
+   {
+      elm_object_text_set(clock_label, formatted_time);
+   }
+   
+   return ECORE_CALLBACK_RENEW;  // Keep the timer running
+}
+
 // Function to start/stop slideshow
 static void
 toggle_slideshow(void)
@@ -453,6 +486,13 @@ on_done(void *data EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *event_info E
       slideshow_timer = NULL;
    }
    
+   // Cleanup clock timer
+   if (clock_timer)
+   {
+      ecore_timer_del(clock_timer);
+      clock_timer = NULL;
+   }
+   
    // Cleanup fade animator
    if (fade_animator)
    {
@@ -485,6 +525,7 @@ on_done(void *data EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *event_info E
    slideshow_video = NULL;
    letterbox_bg = NULL;
    button_box = NULL;
+   clock_label = NULL;
    
    // Called when the window is closed
    INF("Application shutdown requested");
@@ -651,6 +692,33 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
    evas_object_smart_callback_add(slideshow_video, "clicked", on_media_click, NULL);
    evas_object_hide(slideshow_video);  // Initially hidden
 
+   // Create a table container for the letterbox area to overlay the clock
+   Evas_Object *letterbox_table = elm_table_add(win);
+   evas_object_size_hint_weight_set(letterbox_table, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+   evas_object_size_hint_align_set(letterbox_table, EVAS_HINT_FILL, EVAS_HINT_FILL);
+   elm_box_pack_end(box, letterbox_table);
+   evas_object_show(letterbox_table);
+   
+   // Move the letterbox background to the table (spans entire table)
+   elm_box_unpack(box, letterbox_bg);
+   elm_table_pack(letterbox_table, letterbox_bg, 0, 0, 1, 1);
+   
+   // Create digital clock label positioned in lower right of letterbox
+   clock_label = elm_label_add(letterbox_table);
+   elm_object_text_set(clock_label, "<font_size=24><color=#FFFFFF><b>00:00</b></color></font_size>");
+   evas_object_size_hint_weight_set(clock_label, 0.0, 0.0);
+   evas_object_size_hint_align_set(clock_label, 1.0, 1.0);  // Align to bottom right
+   
+   // Set minimum size for the clock
+   evas_object_size_hint_min_set(clock_label, 80, 30);
+   
+   // Add padding around the clock (10 pixels from edges)
+   evas_object_size_hint_padding_set(clock_label, 10, 10, 10, 10);
+   
+   // Position the clock in the lower right corner
+   elm_table_pack(letterbox_table, clock_label, 1, 1, 1, 1);
+   evas_object_show(clock_label);
+
    // Create horizontal box for control buttons
    button_box = elm_box_add(win);
    elm_box_horizontal_set(button_box, EINA_TRUE);
@@ -731,6 +799,11 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
       elm_image_file_set(slideshow_image, NULL, NULL);
       WRN("No images found - slideshow disabled");
    }
+
+   // Initialize and start the digital clock timer
+   clock_timer_cb(NULL);  // Update clock immediately
+   clock_timer = ecore_timer_add(1.0, clock_timer_cb, NULL);  // Update every second
+   INF("Digital clock timer started");
 
    // Set to fullscreen mode if enabled
    if (is_fullscreen)
