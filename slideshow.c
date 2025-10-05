@@ -1,4 +1,5 @@
 #include "slideshow.h"
+#include "ui.h"
 
 // Slideshow state variables
 Eina_Bool slideshow_running = EINA_TRUE;
@@ -14,6 +15,66 @@ double fade_start_time = 0.0;
 // Runtime-configurable timings (initialized to compile-time defaults)
 static double slideshow_interval_runtime = SLIDESHOW_INTERVAL;
 static double fade_duration_runtime = FADE_DURATION;
+
+// Preloading support: hidden Evas image used to warm cache for next image
+static Evas_Object *preload_img = NULL;
+// Navigation coalescing: queue next/prev requests during active fade
+static int pending_nav = 0; // 0 = none, 1 = next, -1 = prev
+
+// Helper to determine next index without mutating current state
+static int _compute_next_index(void)
+{
+   int count = get_media_file_count();
+   if (count <= 0) return -1;
+
+   if (is_shuffle_mode)
+   {
+      if (count == 1)
+         return 0;
+      int idx;
+      do {
+         idx = rand() % count;
+      } while (idx == current_media_index);
+      return idx;
+   }
+   else
+   {
+      return (current_media_index + 1) % count;
+   }
+}
+
+// Preload the next image into the Evas cache to reduce stutter
+static void preload_next_image(void)
+{
+   int next_index = _compute_next_index();
+   if (next_index < 0) return;
+
+   char *next_path = get_media_path_at_index(next_index);
+   if (!next_path) return;
+
+   if (!is_image_file(next_path))
+   {
+      // Only preload images for now
+      return;
+   }
+
+   if (!preload_img)
+   {
+      // Create a hidden Evas image tied to the same canvas
+      Evas *evas = evas_object_evas_get(letterbox_bg);
+      if (!evas) return;
+      preload_img = evas_object_image_add(evas);
+      if (!preload_img) return;
+      evas_object_hide(preload_img);
+      // Match some typical flags to resemble display image scaling behavior
+      evas_object_image_smooth_scale_set(preload_img, EINA_TRUE);
+   }
+
+   // Set file and trigger asynchronous preload into cache
+   evas_object_image_file_set(preload_img, next_path, NULL);
+   evas_object_image_preload(preload_img, EINA_TRUE);
+   DBG("Preloading next image: %s", next_path);
+}
 
 void
 slideshow_set_interval(double seconds)
@@ -106,10 +167,19 @@ fade_animator_cb(void *data EINA_UNUSED)
           alpha = 255;
           evas_object_color_set(slideshow_image, alpha, alpha, alpha, alpha);
           evas_object_color_set(slideshow_video, alpha, alpha, alpha, alpha);
-         
+
          // Animation complete
          fade_animator = NULL;
          is_fading = EINA_FALSE;
+         // Prepare the next image in advance
+         preload_next_image();
+         // Execute any queued navigation coalesced during fade
+         if (pending_nav != 0)
+         {
+            int dir = pending_nav;
+            pending_nav = 0;
+            if (dir > 0) show_next_media(); else show_prev_media();
+         }
          return ECORE_CALLBACK_CANCEL;
       }
       else
@@ -133,15 +203,17 @@ void
 start_fade_transition(const char *media_path)
 {
    if (is_fading) return;  // Already fading
-   
+
    is_fading = EINA_TRUE;
    next_media_path = strdup(media_path);
    fade_start_time = ecore_time_get();
-   
+
    if (fade_animator)
       ecore_animator_del(fade_animator);
-   
+
    fade_animator = ecore_animator_add(fade_animator_cb, NULL);
+   // Kick off preload when fade starts to reduce stutter
+   preload_next_image();
 }
 
 // Function to show the next media in the slideshow
@@ -155,8 +227,8 @@ show_next_media(void)
    count = get_media_file_count();
    if (count == 0) return;
    
-   // Skip if already fading
-   if (is_fading) return;
+   // Skip if already fading; queue request
+   if (is_fading) { pending_nav = 1; return; }
    
    if (is_shuffle_mode)
    {
@@ -182,11 +254,15 @@ show_next_media(void)
    
    current_media_index = new_index;
    media_path = get_media_path_at_index(current_media_index);
+   // Update progress overlay now
+   ui_progress_update_index(current_media_index, count);
    
    if (media_path)
    {
       // Start fade transition to new media
       start_fade_transition(media_path);
+      // Proactively preload the subsequent image
+      preload_next_image();
    }
 }
 
@@ -201,8 +277,8 @@ show_prev_media(void)
    count = get_media_file_count();
    if (count == 0) return;
 
-   // Skip if already fading
-   if (is_fading) return;
+   // Skip if already fading; queue request
+   if (is_fading) { pending_nav = -1; return; }
 
    if (is_shuffle_mode)
    {
@@ -227,11 +303,15 @@ show_prev_media(void)
 
    current_media_index = new_index;
    media_path = get_media_path_at_index(current_media_index);
+   // Update progress overlay now
+   ui_progress_update_index(current_media_index, count);
 
    if (media_path)
    {
       // Start fade transition to new media
       start_fade_transition(media_path);
+      // Warm cache for the subsequent image
+      preload_next_image();
    }
 }
 
@@ -280,6 +360,10 @@ show_media_immediate(const char *media_path)
          INF("Showing video: %s", media_path);
       }
    }
+
+   // Update compact progress overlay for the initially shown media
+   // Use current_media_index and the loaded media list count
+   ui_progress_update_index(current_media_index, eina_list_count(media_files));
 }
 
 // Timer callback for automatic slideshow
@@ -419,6 +503,13 @@ slideshow_cleanup(void)
    slideshow_image = NULL;
    slideshow_video = NULL;
    letterbox_bg = NULL;
+
+   // Cleanup preload image
+   if (preload_img)
+   {
+      evas_object_del(preload_img);
+      preload_img = NULL;
+   }
 }
 
 // Convenience alias for previous navigation

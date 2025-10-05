@@ -31,4 +31,8 @@ void ui_setup_media_display(Evas_Object *parent_box);
 void ui_init(void);
 void ui_cleanup(void);
 
+// Progress overlay API
+void ui_progress_update_index(int index, int count);
+void ui_progress_set_visible(Eina_Bool visible);
+
 #endif /* UI_H */

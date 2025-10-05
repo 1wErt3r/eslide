@@ -4,16 +4,93 @@
 #include "media.h"
 #include "net.h"
 #include <strings.h>
+#include <Ecore.h>
+#include <Evas.h>
 
 // UI state variables
 Eina_Bool is_fullscreen = EINA_TRUE;
 Eina_Bool controls_visible = EINA_FALSE;
 Evas_Object *button_box = NULL;
+static Ecore_Timer *controls_hide_timer = NULL;
+static double controls_inactivity_seconds = 3.0; // auto-hide after 3s
+
+// Progress overlay state
+static Evas_Object *progress_label = NULL;
+static Eina_Bool progress_visible = EINA_FALSE;
+
+static void _progress_on_resize(void *data EINA_UNUSED, Evas *e EINA_UNUSED, Evas_Object *obj, void *event_info EINA_UNUSED)
+{
+   if (!progress_label || !obj) return;
+   int x, y, w, h;
+   evas_object_geometry_get(obj, &x, &y, &w, &h);
+   // Determine the label's minimum size so it isn't 0x0
+   Evas_Coord mw = 0, mh = 0;
+   evas_object_size_hint_min_get(progress_label, &mw, &mh);
+   if (mw <= 0) mw = 60;
+   if (mh <= 0) mh = 24;
+   evas_object_resize(progress_label, mw, mh);
+
+   // Position near top-right with a 12px margin
+   int margin = 12;
+   int px = x + w - margin - mw;
+   if (px < x + margin) px = x + margin;
+   int py = y + margin;
+   evas_object_move(progress_label, px, py);
+   // Ensure overlay stays above other content
+   evas_object_raise(progress_label);
+}
+
+static void _controls_hide(void)
+{
+   controls_visible = EINA_FALSE;
+   if (button_box)
+      evas_object_hide(button_box);
+   INF("Controls auto-hidden due to inactivity");
+}
+
+static Eina_Bool _controls_hide_cb(void *data EINA_UNUSED)
+{
+   controls_hide_timer = NULL;
+   _controls_hide();
+   return ECORE_CALLBACK_CANCEL;
+}
+
+static void controls_reset_inactivity_timer(void)
+{
+   if (!controls_visible) return; // only when visible
+   if (controls_hide_timer)
+   {
+      ecore_timer_del(controls_hide_timer);
+      controls_hide_timer = NULL;
+   }
+   controls_hide_timer = ecore_timer_add(controls_inactivity_seconds, _controls_hide_cb, NULL);
+}
 
 // Slideshow widget variables (defined here since they're created in UI)
 Evas_Object *slideshow_image = NULL;
 Evas_Object *slideshow_video = NULL;
 Evas_Object *letterbox_bg = NULL;
+
+// Double-click on letterbox to toggle fullscreen
+static void on_letterbox_mouse_down(void *data EINA_UNUSED, Evas *e EINA_UNUSED, Evas_Object *obj, void *event_info)
+{
+   controls_reset_inactivity_timer();
+   Evas_Event_Mouse_Down *ev = (Evas_Event_Mouse_Down *)event_info;
+   if (!ev) return;
+   // Left button double-click toggles fullscreen
+   if (ev->button == 1 && (ev->flags & EVAS_BUTTON_DOUBLE_CLICK))
+   {
+      Evas_Object *win = elm_object_top_widget_get(obj);
+      if (!win) return;
+      is_fullscreen = !is_fullscreen;
+      elm_win_fullscreen_set(win, is_fullscreen);
+      if (!is_fullscreen)
+      {
+         evas_object_resize(win, 640, 480);
+      }
+      INF("Double-click: Toggle fullscreen");
+   }
+}
 
 // Event handler functions
 void
@@ -101,6 +178,8 @@ void
 on_media_click(void *data EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *event_info EINA_UNUSED)
 {
    toggle_controls();
+   // Start/reset inactivity timer when controls are shown
+   controls_reset_inactivity_timer();
 }
 
 void
@@ -136,6 +215,15 @@ on_quotes_toggle_click(void *data EINA_UNUSED, Evas_Object *obj, void *event_inf
    }
 }
 
+// Progress overlay toggle button handler
+static void
+on_progress_toggle_click(void *data EINA_UNUSED, Evas_Object *obj, void *event_info EINA_UNUSED)
+{
+   progress_visible = !progress_visible;
+   ui_progress_set_visible(progress_visible);
+   elm_object_text_set(obj, progress_visible ? "Progress: ON" : "Progress: OFF");
+}
+
 // Keyboard handler to support shortcuts (Space, Left/Right, F, C, S, Escape)
 static void
 on_key_down(void *data, Evas *e EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *event_info)
@@ -143,6 +231,9 @@ on_key_down(void *data, Evas *e EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void 
    Evas_Event_Key_Down *ev = (Evas_Event_Key_Down *)event_info;
    if (!ev || !ev->key) return;
    const char *key = ev->key;
+
+   // Any key press resets inactivity timer
+   controls_reset_inactivity_timer();
 
    if (!strcasecmp(key, "space"))
    {
@@ -193,11 +284,17 @@ toggle_controls(void)
       {
          evas_object_show(button_box);
          INF("Controls shown");
+         controls_reset_inactivity_timer();
       }
       else
       {
          evas_object_hide(button_box);
          INF("Controls hidden");
+         if (controls_hide_timer)
+         {
+            ecore_timer_del(controls_hide_timer);
+            controls_hide_timer = NULL;
+         }
       }
    }
 }
@@ -243,6 +340,9 @@ ui_setup_media_display(Evas_Object *parent_box)
    evas_object_size_hint_weight_set(letterbox_bg, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
    evas_object_size_hint_align_set(letterbox_bg, EVAS_HINT_FILL, EVAS_HINT_FILL);
    evas_object_smart_callback_add(letterbox_bg, "clicked", on_media_click, NULL);
+   // Reset inactivity timer on mouse movement and clicks
+   evas_object_event_callback_add(letterbox_bg, EVAS_CALLBACK_MOUSE_MOVE, (Evas_Object_Event_Cb)controls_reset_inactivity_timer, NULL);
+   evas_object_event_callback_add(letterbox_bg, EVAS_CALLBACK_MOUSE_DOWN, on_letterbox_mouse_down, NULL);
    elm_box_pack_end(parent_box, letterbox_bg);
    evas_object_show(letterbox_bg);
    printf("Letterbox_bg shown\n");
@@ -274,6 +374,18 @@ ui_setup_media_display(Evas_Object *parent_box)
 
    // Set up resize callback for letterbox to reposition clock
    evas_object_event_callback_add(letterbox_bg, EVAS_CALLBACK_RESIZE, on_letterbox_resize, NULL);
+   // Set up resize callback to keep progress overlay anchored
+   evas_object_event_callback_add(letterbox_bg, EVAS_CALLBACK_RESIZE, _progress_on_resize, NULL);
+
+   // Create compact progress label overlay (hidden by default)
+   progress_label = elm_label_add(letterbox_bg);
+   elm_object_text_set(progress_label, "");
+   evas_object_color_set(progress_label, 255, 255, 255, 255);
+   // Give the label a sensible minimum size so it is visible when shown
+   evas_object_size_hint_min_set(progress_label, 60, 24);
+   evas_object_hide(progress_label);
+   // Initial position calculation
+   _progress_on_resize(NULL, NULL, letterbox_bg, NULL);
    
    // Initialize slideshow with the created widgets
    slideshow_init(slideshow_image, slideshow_video, letterbox_bg);
@@ -351,6 +463,15 @@ ui_create_controls(Evas_Object *parent_box, Evas_Object *win)
    elm_box_pack_end(button_box, clock_btn);
    evas_object_show(clock_btn);
 
+   // Create Progress overlay toggle button
+   Evas_Object *progress_btn = elm_button_add(win);
+   elm_object_text_set(progress_btn, "Progress: OFF");
+   evas_object_smart_callback_add(progress_btn, "clicked", on_progress_toggle_click, progress_btn);
+   evas_object_size_hint_weight_set(progress_btn, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+   evas_object_size_hint_align_set(progress_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
+   elm_box_pack_end(button_box, progress_btn);
+   evas_object_show(progress_btn);
+
    // Create Fullscreen button
    Evas_Object *fullscreen_btn = elm_button_add(win);
    elm_object_text_set(fullscreen_btn, "Fullscreen");
@@ -373,4 +494,36 @@ ui_cleanup(void)
 {
    // Reset global pointers
    button_box = NULL;
+}
+
+// Progress overlay API implementations
+void
+ui_progress_update_index(int index, int count)
+{
+   if (!progress_label) return;
+   if (index < 0 || count <= 0) return;
+   char buf[64];
+   snprintf(buf, sizeof(buf), "%d/%d", index + 1, count);
+   elm_object_text_set(progress_label, buf);
+   if (progress_visible)
+      evas_object_show(progress_label);
+}
+
+void
+ui_progress_set_visible(Eina_Bool visible)
+{
+   progress_visible = visible;
+   if (!progress_label) return;
+   if (visible)
+   {
+      _progress_on_resize(NULL, NULL, letterbox_bg, NULL);
+      evas_object_raise(progress_label);
+      // Ensure text is up-to-date the moment it is shown
+      ui_progress_update_index(current_media_index, get_media_file_count());
+      evas_object_show(progress_label);
+   }
+   else
+   {
+      evas_object_hide(progress_label);
+   }
 }
