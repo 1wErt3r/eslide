@@ -1,7 +1,7 @@
-# EFL Hello World Makefile
+# eslide Makefile
 
 # Program name
-PROGRAM = efl-hello
+PROGRAM = eslide
 
 # Source files
 SOURCES = main.c

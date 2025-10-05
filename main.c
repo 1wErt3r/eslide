@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <stdlib.h>
 #include <time.h>
-#include <string.h>
 #include <Elementary.h>
 #include <Emotion.h>
 #include <Eina.h>
@@ -18,8 +18,14 @@ static int _log_domain = -1;
 #define INF(...)      EINA_LOG_DOM_INFO(_log_domain, __VA_ARGS__)
 #define DBG(...)      EINA_LOG_DOM_DBG(_log_domain, __VA_ARGS__)
 
+// Media file structure to store paths
+typedef struct _MediaFile {
+   char *path;
+   Eina_Bool is_image;
+} MediaFile;
+
 // Global variables
-static Eina_Bool is_fullscreen = EINA_FALSE;
+static Eina_Bool is_fullscreen = EINA_TRUE;
 static Evas_Object *slideshow_image = NULL;
 static Evas_Object *slideshow_video = NULL;
 static Evas_Object *letterbox_bg = NULL;
@@ -29,15 +35,7 @@ static Eina_List *media_files = NULL;
 static int current_media_index = 0;
 static Eina_Bool slideshow_running = EINA_TRUE;
 static Eina_Bool controls_visible = EINA_FALSE;
-
-// Clock variables
-static Evas_Object *clock_label = NULL;
-static Ecore_Timer *clock_timer = NULL;
-static Eina_Bool clock_visible = EINA_TRUE;
-static Ecore_Animator *clock_fade_animator = NULL;
-static Eina_Bool clock_is_fading = EINA_FALSE;
-static double clock_fade_start_time = 0.0;
-static Eina_Bool clock_target_visible = EINA_TRUE;
+static Eina_Bool is_shuffle_mode = EINA_FALSE;  // Default to sequential mode
 
 // Fade transition variables
 static Ecore_Animator *fade_animator = NULL;
@@ -49,11 +47,6 @@ static double fade_start_time = 0.0;
 #define SLIDESHOW_INTERVAL 10.0  // 10 seconds between images
 #define IMAGES_DIR "./images/"
 #define FADE_DURATION 0.5  // 0.5 seconds fade duration
-
-// Clock configuration
-#define CLOCK_UPDATE_INTERVAL 1.0  // Update clock every second
-#define CLOCK_FADE_DURATION 0.3    // 0.3 seconds fade duration for clock
-#define CLOCK_FONT_SIZE 48         // Large font size for readability
 
 // Function to check if a file has an image extension
 static Eina_Bool
@@ -84,137 +77,35 @@ is_media_file(const char *filename)
    return is_image_file(filename) || is_video_file(filename);
 }
 
-// Clock fade animation callback function
-static Eina_Bool
-clock_fade_animator_cb(void *data EINA_UNUSED)
-{
-   double current_time = ecore_time_get();
-   double elapsed = current_time - clock_fade_start_time;
-   double progress = elapsed / CLOCK_FADE_DURATION;
-   
-   if (progress >= 1.0)
-   {
-      progress = 1.0;
-      clock_fade_animator = NULL;
-      clock_is_fading = EINA_FALSE;
-   }
-   
-   int alpha;
-   if (clock_target_visible)
-   {
-      // Fading in
-      alpha = (int)(255 * progress);
-      clock_visible = (progress >= 1.0) ? EINA_TRUE : clock_visible;
-   }
-   else
-   {
-      // Fading out
-      alpha = (int)(255 * (1.0 - progress));
-      if (progress >= 1.0)
-      {
-         clock_visible = EINA_FALSE;
-         evas_object_hide(clock_label);
-      }
-   }
-   
-   if (alpha < 0) alpha = 0;
-   if (alpha > 255) alpha = 255;
-   
-   // Apply alpha to clock (premultiplied colors)
-   evas_object_color_set(clock_label, alpha, alpha, alpha, alpha);
-   
-   return (progress < 1.0) ? ECORE_CALLBACK_RENEW : ECORE_CALLBACK_CANCEL;
-}
-
-// Function to update clock display
+// Function to free a media file structure
 static void
-update_clock_display(void)
+free_media_file(MediaFile *media_file)
 {
-   time_t rawtime;
-   struct tm *timeinfo;
-   char time_buffer[64];
-   char date_buffer[64];
-   char full_buffer[128];
+   if (!media_file) return;
    
-   if (!clock_label) return;
-   
-   time(&rawtime);
-   timeinfo = localtime(&rawtime);
-   
-   // Format time in 12-hour format with AM/PM (iOS/Windows style)
-   strftime(time_buffer, sizeof(time_buffer), "%I:%M", timeinfo);
-   strftime(date_buffer, sizeof(date_buffer), "%A, %B %d", timeinfo);
-   
-   // Remove leading zero from hour if present
-   if (time_buffer[0] == '0')
-   {
-      memmove(time_buffer, time_buffer + 1, strlen(time_buffer));
+   if (media_file->path) {
+      free(media_file->path);
+      media_file->path = NULL;
    }
-   
-   // Create formatted string with time and date with shadow for visibility
-   snprintf(full_buffer, sizeof(full_buffer), 
-            "<font_size=%d><color=#FFFFFF><shadow><shadow_color=#000000><shadow_offset=2,2>%s</shadow></shadow></color></font_size><br>"
-            "<font_size=%d><color=#CCCCCC><shadow><shadow_color=#000000><shadow_offset=1,1>%s</shadow></shadow></color></font_size>", 
-            CLOCK_FONT_SIZE, time_buffer, 
-            CLOCK_FONT_SIZE / 2, date_buffer);
-   
-   elm_object_text_set(clock_label, full_buffer);
+   free(media_file);
 }
 
-// Timer callback for clock updates
-static Eina_Bool
-clock_timer_cb(void *data EINA_UNUSED)
-{
-   if (clock_visible || clock_is_fading)
-   {
-      update_clock_display();
-   }
-   return ECORE_CALLBACK_RENEW;  // Keep the timer running
-}
-
-// Function to toggle clock visibility with smooth transition
+// Function to scan and store media files from the images directory (lazy loading)
 static void
-toggle_clock_visibility(void)
-{
-   if (clock_is_fading) return;  // Already fading
-   
-   clock_target_visible = !clock_visible;
-   clock_is_fading = EINA_TRUE;
-   clock_fade_start_time = ecore_time_get();
-   
-   if (clock_fade_animator)
-      ecore_animator_del(clock_fade_animator);
-   
-   // If fading in, show the clock widget first
-   if (clock_target_visible && !clock_visible)
-   {
-      evas_object_show(clock_label);
-      update_clock_display();  // Update immediately when showing
-   }
-   
-   clock_fade_animator = ecore_animator_add(clock_fade_animator_cb, NULL);
-   
-   if (clock_target_visible)
-   {
-      INF("Clock fade in started");
-      printf("Clock shown\n");
-   }
-   else
-   {
-      INF("Clock fade out started");
-      printf("Clock hidden\n");
-   }
-}
-
-// Function to load media files from the images directory
-static void
-load_media_files(void)
+scan_media_files(void)
 {
    DIR *dir;
    struct dirent *entry;
    Eina_Strbuf *filepath_buf;
-   const char *filepath;
+   char *filepath;
    struct stat file_stat;
+   
+   // Free any existing media file list before scanning
+   MediaFile *media_file;
+   EINA_LIST_FREE(media_files, media_file) {
+      free_media_file(media_file);
+   }
+   media_files = NULL;
    
    dir = opendir(IMAGES_DIR);
    if (!dir)
@@ -235,18 +126,32 @@ load_media_files(void)
          eina_strbuf_reset(filepath_buf);
          eina_strbuf_append(filepath_buf, IMAGES_DIR);
          eina_strbuf_append(filepath_buf, entry->d_name);
-         filepath = eina_strbuf_string_get(filepath_buf);
+         filepath = strdup(eina_strbuf_string_get(filepath_buf));
          
          // Check if it's a regular file
          if (stat(filepath, &file_stat) == 0 && S_ISREG(file_stat.st_mode))
          {
-            // Use stringshare for efficient string storage
-            const char *shared_path = eina_stringshare_add(filepath);
-            media_files = eina_list_append(media_files, (void*)shared_path);
-            if (is_image_file(entry->d_name))
-               INF("Added image: %s", shared_path);
+            // Create media file structure
+            MediaFile *new_media = malloc(sizeof(MediaFile));
+            if (new_media)
+            {
+               new_media->path = filepath;
+               new_media->is_image = is_image_file(entry->d_name);
+               media_files = eina_list_append(media_files, new_media);
+               
+               if (new_media->is_image)
+                  INF("Added image: %s", new_media->path);
+               else
+                  INF("Added video: %s", new_media->path);
+            }
             else
-               INF("Added video: %s", shared_path);
+            {
+               free(filepath);
+            }
+         }
+         else
+         {
+            free(filepath);
          }
       }
    }
@@ -262,6 +167,34 @@ load_media_files(void)
    {
       INF("Loaded %d media files", eina_list_count(media_files));
    }
+}
+
+// Function to get the count of media files (scans directory each time for up-to-date count)
+static int
+get_media_file_count(void)
+{
+   // Scan media files to ensure we have current count
+   scan_media_files();
+   return eina_list_count(media_files);
+}
+
+// Function to get path of media at specific index
+static char*
+get_media_path_at_index(int index)
+{
+   if (index < 0)
+      return NULL;
+      
+   scan_media_files();  // Refresh the list to ensure it's current
+   unsigned int media_count = eina_list_count(media_files);
+   if ((unsigned int)index >= media_count)
+      return NULL;
+      
+   MediaFile *media_file = eina_list_nth(media_files, index);
+   if (!media_file)
+      return NULL;
+      
+   return media_file->path;
 }
 
 // Fade animation callback function
@@ -387,30 +320,36 @@ show_next_media(void)
    int count;
    int new_index;
    
-   if (!media_files) return;
-   
-   count = eina_list_count(media_files);
+   count = get_media_file_count();
    if (count == 0) return;
    
    // Skip if already fading
    if (is_fading) return;
    
-   // Get next media file (avoid showing the same image twice in a row)
-   if (count == 1)
+   if (is_shuffle_mode)
    {
-      // Only one file, use it
-      new_index = 0;
+      // Random shuffle mode
+      if (count == 1)
+      {
+         // Only one file, use it
+         new_index = 0;
+      }
+      else
+      {
+         // Multiple files - pick a different one than current
+         do {
+            new_index = rand() % count;
+         } while (new_index == current_media_index);
+      }
    }
    else
    {
-      // Multiple files - pick a different one than current
-      do {
-         new_index = rand() % count;
-      } while (new_index == current_media_index);
+      // Sequential mode - go to next file in order
+      new_index = (current_media_index + 1) % count;
    }
    
    current_media_index = new_index;
-   media_path = eina_list_nth(media_files, current_media_index);
+   media_path = get_media_path_at_index(current_media_index);
    
    if (media_path)
    {
@@ -514,19 +453,6 @@ on_done(void *data EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *event_info E
       slideshow_timer = NULL;
    }
    
-   // Cleanup clock resources
-   if (clock_timer)
-   {
-      ecore_timer_del(clock_timer);
-      clock_timer = NULL;
-   }
-   
-   if (clock_fade_animator)
-   {
-      ecore_animator_del(clock_fade_animator);
-      clock_fade_animator = NULL;
-   }
-   
    // Cleanup fade animator
    if (fade_animator)
    {
@@ -547,11 +473,11 @@ on_done(void *data EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *event_info E
       elm_video_stop(slideshow_video);
    }
    
-   // Free media file paths (stringshare)
-   const char *media_path;
-   EINA_LIST_FREE(media_files, media_path)
+   // Free media file structures
+   MediaFile *media_file;
+   EINA_LIST_FREE(media_files, media_file)
    {
-      eina_stringshare_del(media_path);
+      free_media_file(media_file);
    }
    
    // Reset global pointers
@@ -559,7 +485,6 @@ on_done(void *data EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *event_info E
    slideshow_video = NULL;
    letterbox_bg = NULL;
    button_box = NULL;
-   clock_label = NULL;
    
    // Called when the window is closed
    INF("Application shutdown requested");
@@ -602,11 +527,39 @@ on_next_image_click(void *data EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *
    printf("Next media\n");
 }
 
+// Function to toggle shuffle mode
 static void
-on_toggle_clock_click(void *data EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *event_info EINA_UNUSED)
+toggle_shuffle_mode(void)
 {
-   toggle_clock_visibility();
-   INF("Clock toggle button clicked!");
+   is_shuffle_mode = !is_shuffle_mode;
+   
+   if (is_shuffle_mode)
+   {
+      INF("Shuffle mode enabled");
+      printf("Shuffle mode enabled\n");
+   }
+   else
+   {
+      INF("Sequential mode enabled");
+      printf("Sequential mode enabled\n");
+   }
+}
+
+// Callback for shuffle toggle button
+static void
+on_shuffle_click(void *data EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *event_info EINA_UNUSED)
+{
+   toggle_shuffle_mode();
+   
+   // Update button text to reflect current mode
+   Evas_Object *shuffle_btn = (Evas_Object *)data;
+   if (shuffle_btn)
+   {
+      if (is_shuffle_mode)
+         elm_object_text_set(shuffle_btn, "Shuffle: ON");
+      else
+         elm_object_text_set(shuffle_btn, "Shuffle: OFF");
+   }
 }
 
 // Click handler for media area to toggle controls
@@ -638,7 +591,7 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
    elm_policy_set(ELM_POLICY_QUIT, ELM_POLICY_QUIT_LAST_WINDOW_CLOSED);
 
    // Create main window
-   win = elm_win_util_standard_add("efl-hello", "EFL Hello World Slideshow");
+   win = elm_win_util_standard_add("eslide", "eslide");
    evas_object_smart_callback_add(win, "delete,request", on_done, NULL);
    
    // Set window background to black to match letterboxing
@@ -698,27 +651,6 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
    evas_object_smart_callback_add(slideshow_video, "clicked", on_media_click, NULL);
    evas_object_hide(slideshow_video);  // Initially hidden
 
-   // Create clock overlay widget with high-quality typography
-   clock_label = elm_label_add(win);
-   elm_label_line_wrap_set(clock_label, ELM_WRAP_NONE);
-   evas_object_size_hint_weight_set(clock_label, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
-   evas_object_size_hint_align_set(clock_label, 0.5, 0.1);  // Center horizontally, near top
-   
-   // Set initial clock text with shadow effect for better visibility
-   elm_object_text_set(clock_label, 
-      "<font_size=48><color=#FFFFFF><shadow><shadow_color=#000000><shadow_offset=2,2>12:00</shadow></shadow></color></font_size><br>"
-      "<font_size=24><color=#CCCCCC><shadow><shadow_color=#000000><shadow_offset=1,1>Loading...</shadow></shadow></color></font_size>");
-   
-   // Position clock as overlay on the letterbox background
-   evas_object_layer_set(clock_label, 100);  // High layer to ensure it's on top
-   evas_object_smart_callback_add(clock_label, "clicked", on_media_click, NULL);
-   evas_object_show(clock_label);
-   
-   // Add clock to the main box for proper positioning
-   elm_box_pack_end(box, clock_label);
-   
-   INF("Clock widget created and positioned");
-
    // Create horizontal box for control buttons
    button_box = elm_box_add(win);
    elm_box_horizontal_set(button_box, EINA_TRUE);
@@ -746,6 +678,18 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
    elm_box_pack_end(button_box, next_btn);
    evas_object_show(next_btn);
 
+   // Create Shuffle Toggle button
+   Evas_Object *shuffle_btn = elm_button_add(win);
+   if (is_shuffle_mode)
+      elm_object_text_set(shuffle_btn, "Shuffle: ON");
+   else
+      elm_object_text_set(shuffle_btn, "Shuffle: OFF");
+   evas_object_smart_callback_add(shuffle_btn, "clicked", on_shuffle_click, shuffle_btn);
+   evas_object_size_hint_weight_set(shuffle_btn, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+   evas_object_size_hint_align_set(shuffle_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
+   elm_box_pack_end(button_box, shuffle_btn);
+   evas_object_show(shuffle_btn);
+
    // Create Fullscreen button
    Evas_Object *fullscreen_btn = elm_button_add(win);
    elm_object_text_set(fullscreen_btn, "Fullscreen");
@@ -755,24 +699,27 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
    elm_box_pack_end(button_box, fullscreen_btn);
    evas_object_show(fullscreen_btn);
 
-   // Create Toggle Clock button
-   Evas_Object *clock_btn = elm_button_add(win);
-   elm_object_text_set(clock_btn, "Toggle Clock");
-   evas_object_smart_callback_add(clock_btn, "clicked", on_toggle_clock_click, NULL);
-   evas_object_size_hint_weight_set(clock_btn, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
-   evas_object_size_hint_align_set(clock_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
-   elm_box_pack_end(button_box, clock_btn);
-   evas_object_show(clock_btn);
-
    // Load media files and start slideshow
-   load_media_files();
+   int media_count = get_media_file_count();
    
-   if (eina_list_count(media_files) > 0)
+   if (media_count > 0)
    {
       // Show first media immediately (without fade)
-      current_media_index = rand() % eina_list_count(media_files);
-      char *first_media = eina_list_nth(media_files, current_media_index);
-      show_media_immediate(first_media);
+      // In sequential mode, start with the first file; in shuffle, pick a random one
+      if (is_shuffle_mode)
+      {
+         current_media_index = rand() % media_count;
+      }
+      else
+      {
+         current_media_index = 0;  // Start with first file in sequential mode
+      }
+      
+      char *first_media = get_media_path_at_index(current_media_index);
+      if (first_media)
+      {
+         show_media_immediate(first_media);
+      }
       
       // Start slideshow timer
       slideshow_timer = ecore_timer_add(SLIDESHOW_INTERVAL, slideshow_timer_cb, NULL);
@@ -785,11 +732,13 @@ elm_main(int argc EINA_UNUSED, char **argv EINA_UNUSED)
       WRN("No images found - slideshow disabled");
    }
 
-   // Start clock timer (always running regardless of media files)
-   clock_timer = ecore_timer_add(CLOCK_UPDATE_INTERVAL, clock_timer_cb, NULL);
-   update_clock_display();  // Update immediately
-   INF("Clock timer started with %f second interval", CLOCK_UPDATE_INTERVAL);
-
+   // Set to fullscreen mode if enabled
+   if (is_fullscreen)
+   {
+      elm_win_fullscreen_set(win, EINA_TRUE);
+      INF("Application started in fullscreen mode");
+   }
+   
    // Set window size and show
    evas_object_resize(win, 640, 480);
    evas_object_show(win);
