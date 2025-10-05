@@ -190,6 +190,51 @@ show_next_media(void)
    }
 }
 
+// Function to show the previous media in the slideshow
+void
+show_prev_media(void)
+{
+   char *media_path;
+   int count;
+   int new_index;
+
+   count = get_media_file_count();
+   if (count == 0) return;
+
+   // Skip if already fading
+   if (is_fading) return;
+
+   if (is_shuffle_mode)
+   {
+      // Random shuffle mode
+      if (count == 1)
+      {
+         new_index = 0;
+      }
+      else
+      {
+         // Pick a different one than current
+         do {
+            new_index = rand() % count;
+         } while (new_index == current_media_index);
+      }
+   }
+   else
+   {
+      // Sequential mode - go to previous file in order
+      new_index = (current_media_index - 1 + count) % count;
+   }
+
+   current_media_index = new_index;
+   media_path = get_media_path_at_index(current_media_index);
+
+   if (media_path)
+   {
+      // Start fade transition to new media
+      start_fade_transition(media_path);
+   }
+}
+
 // Function to show media immediately (without fade, for initial load)
 void
 show_media_immediate(const char *media_path)
@@ -374,4 +419,11 @@ slideshow_cleanup(void)
    slideshow_image = NULL;
    slideshow_video = NULL;
    letterbox_bg = NULL;
+}
+
+// Convenience alias for previous navigation
+void
+slideshow_prev(void)
+{
+   show_prev_media();
 }

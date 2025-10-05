@@ -23,6 +23,7 @@ extern double fade_start_time;
 // Slideshow control functions
 void toggle_slideshow(void);
 void show_next_media(void);
+void show_prev_media(void);
 void show_media_immediate(const char *media_path);
 void toggle_shuffle_mode(void);
 
@@ -41,5 +42,8 @@ void slideshow_cleanup(void);
 // Runtime configuration setters
 void slideshow_set_interval(double seconds);
 void slideshow_set_fade_duration(double seconds);
+
+// Convenience alias for previous navigation
+void slideshow_prev(void);
 
 #endif /* SLIDESHOW_H */

@@ -1,0 +1,253 @@
+# ESlide - EFL Media Slideshow Application
+
+A media slideshow application built with Enlightenment Foundation Libraries (EFL), featuring automatic image/video playback, smooth transitions, and interactive controls.
+
+## Project Overview
+
+ESlide is a full-screen media presentation application that automatically cycles through images and videos in the `./images/` directory. It provides a slideshow experience with smooth fade transitions, media controls, and an optional digital clock display.
+
+### Key Features
+
+- **Automatic Slideshow**: Cycles through media files every 10 seconds
+- **Media Support**: Handles both images (JPEG, PNG, GIF) and videos (MP4, AVI, MOV)
+- **Smooth Transitions**: 0.5-second fade transitions between media items
+- **Interactive Controls**: On-screen controls for navigation and settings
+- **Shuffle Mode**: Randomize playback order
+- **Fullscreen Display**: Professional full-screen presentation mode
+- **Digital Clock**: Optional clock overlay with automatic positioning
+- **Web Message Overlay**: Fetches a short message from the internet at startup
+- **Media Detection**: Automatically scans and catalogs media files
+- **Keyboard/Mouse Support**: Toggle controls and navigate media
+
+## Architecture
+
+### Core Components
+
+#### 1. **Main Application (`main.c`)**
+- Entry point and application initialization
+- Coordinates all modules and manages application lifecycle
+- Sets up main window and event loop
+
+#### 2. **UI Module (`ui.c/h`)**
+- Main window creation and layout management
+- Control panel with interactive buttons
+- Event handling for user interactions
+- Fullscreen and window management
+
+#### 3. **Slideshow Engine (`slideshow.c/h`)**
+- Automatic media progression with configurable timing
+- Smooth fade transition animations using Ecore animators
+- Media type detection and appropriate display handling
+- Timer-based slideshow control
+
+#### 4. **Media Management (`media.c/h`)**
+- File system scanning for supported media formats
+- Media file cataloging and indexing
+- File type detection (images vs videos)
+- Dynamic media list management
+
+#### 5. **Clock Module (`clock.c/h`)**
+- Digital clock display with automatic updates
+- Smart positioning relative to media content
+- Toggle visibility functionality
+- Timer-based clock updates
+
+#### 6. **Common Utilities (`common.c/h`)**
+- Application-wide logging system
+- Configuration constants and definitions
+- Shared data structures
+- Cross-platform compatibility macros
+
+### Data Flow
+
+1. **Initialization**: Application scans `./images/` directory for media files
+2. **Display**: First media item is shown immediately
+3. **Slideshow**: Timer triggers automatic progression with fade transitions
+4. **User Control**: Interactive controls allow manual navigation and settings
+5. **Cleanup**: Proper resource deallocation on exit
+
+## Installation and Setup
+
+### Prerequisites
+
+- **EFL (Enlightenment Foundation Libraries)** 
+- **pkg-config** for dependency management
+- **GCC compiler** with C99 support
+- **Emotion** library (for video playback support)
+
+### Building the Application
+
+1. **Clone or download the source code**
+2. **Navigate to the project directory**
+3. **Check dependencies**:
+   ```bash
+   make check-deps
+   ```
+
+4. **Build the application**:
+   ```bash
+   make
+   ```
+
+5. **Run the application**:
+   ```bash
+   make run
+   # or
+   ./eslide
+   ```
+
+### Makefile Targets
+
+- `make` or `make all` - Build the application
+- `make clean` - Remove build artifacts
+- `make run` - Build and run the application
+- `make check-deps` - Verify EFL dependencies
+- `make install` - Install to `/usr/local/bin/`
+- `make uninstall` - Remove from `/usr/local/bin/`
+- `make help` - Show available targets
+
+## Usage Guide
+
+### Adding Media Content
+
+Place your image and video files in the `./images/` directory:
+- **Supported Images**: JPEG, PNG, GIF, BMP
+- **Supported Videos**: MP4, AVI, MOV, MKV
+- **File Naming**: Any valid filename (application scans automatically)
+
+### Controls and Navigation
+
+#### On-Screen Controls
+- **Next**: Skip to next media item
+- **Shuffle**: Toggle random playback order
+- **Clock**: Toggle digital clock display
+- **Fullscreen**: Toggle fullscreen mode
+- **Close**: Exit application
+
+#### Keyboard Shortcuts
+- **Space**: Toggle slideshow play/pause
+- **Right Arrow**: Next media item
+- **F**: Toggle fullscreen
+- **C**: Toggle clock display
+- **S**: Toggle shuffle mode
+- **Escape**: Exit application
+
+#### Mouse Controls
+- **Click**: Toggle control panel visibility
+
+### Command Line Arguments
+
+You can override defaults at startup using flags:
+
+- `--interval SECONDS` or `-i SECONDS` — slideshow interval
+- `--fade SECONDS` or `-f SECONDS` — fade transition duration
+- `--images-dir PATH` or `-d PATH` — directory with media files
+- `--fullscreen` / `--no-fullscreen` — start fullscreen or windowed
+- `--shuffle` / `--no-shuffle` — enable or disable shuffle mode
+- `--clock` / `--no-clock` — show or hide the clock overlay
+- `--version` or `-V` — print version information
+- `--help` or `-h` — show help
+
+Examples:
+
+```bash
+./eslide --interval 8 --fade 0.75
+./eslide --images-dir ./pictures --shuffle --clock
+./eslide --no-fullscreen --no-shuffle
+```
+
+Note: These options are parsed and logged at startup. Core behavior still uses compile-time defaults until modules are fully wired to use parsed values.
+
+### Configuration Options
+
+Edit `common.h` to customize:
+```c
+#define SLIDESHOW_INTERVAL 10.0  // Seconds between transitions
+#define FADE_DURATION 0.5        // Fade transition duration
+#define IMAGES_DIR "./images/"  // Media directory path
+```
+
+## Technical Details
+
+### Supported Media Formats
+
+**Images**: JPEG, JPG, PNG, GIF, BMP, TIFF, WebP
+**Videos**: MP4, AVI, MOV, MKV, FLV, WMV, MPG, MPEG
+
+### Performance Characteristics
+
+- **Memory Usage**: Efficient media loading with proper cleanup
+- **Transition Performance**: Hardware-accelerated fade animations
+- **File Scanning**: Optimized directory traversal
+- **Resource Management**: Proper cleanup and error handling
+
+### Error Handling
+
+- Graceful fallback for unsupported media formats
+- Automatic recovery from corrupted files
+- Comprehensive logging for debugging
+- Safe cleanup on application exit
+
+## Development Information
+
+### Code Structure
+
+```
+eslide/
+├── main.c              # Application entry point
+├── ui.c/h              # User interface components
+├── slideshow.c/h       # Slideshow engine
+├── media.c/h           # Media file management
+├── clock.c/h           # Digital clock functionality
+├── common.c/h          # Shared utilities and logging
+├── Makefile           # Build configuration
+└── images/            # Media content directory
+```
+
+### Adding New Features
+
+1. **New Media Types**: Extend `is_media_file()` in `media.c`
+2. **New Controls**: Add buttons to `ui_create_controls()`
+3. **New Transitions**: Implement in `slideshow.c`
+4. **New Modules**: Follow existing module pattern with init/cleanup functions
+
+### Network Fetch Example
+
+On application startup, ESlide performs a simple asynchronous HTTP GET request using `Ecore_Con_Url` to fetch a short text message from a public API.
+
+- Endpoint: `https://api.github.com/zen`
+- Display: A small white text label in the top-left overlay
+- Behavior: Request starts after the window is shown; text updates automatically when the response arrives
+
+Dependencies: Ensure `ecore-con` is available via `pkg-config` (added to the Makefile).
+
+### Debugging
+
+Enable debug logging by setting environment variable:
+```bash
+export EINA_LOG_LEVEL=4
+./eslide
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**GL Extension Warning on macOS**: Normal and doesn't affect functionality
+**Missing Dependencies**: Run `make check-deps` to verify installation
+**Media Not Loading**: Check file permissions and supported formats
+**Black Screen**: Verify media files exist in `./images/` directory
+
+### Platform-Specific Notes
+
+- **macOS**: May require additional EFL configuration
+- **Linux**: Ensure video codecs are installed for video playback
+- **Windows**: Use WSL or Cygwin for compilation
+
+## License and Credits
+
+Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/)
+
+EFL Version Tested: 1.28.1
+
+---

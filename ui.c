@@ -2,6 +2,8 @@
 #include "slideshow.h"
 #include "clock.h"
 #include "media.h"
+#include "net.h"
+#include <strings.h>
 
 // UI state variables
 Eina_Bool is_fullscreen = EINA_TRUE;
@@ -72,6 +74,14 @@ on_next_image_click(void *data EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *
 }
 
 void
+on_prev_image_click(void *data EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *event_info EINA_UNUSED)
+{
+   show_prev_media();
+   INF("Manual previous media");
+   printf("Previous media\n");
+}
+
+void
 on_shuffle_click(void *data EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *event_info EINA_UNUSED)
 {
    toggle_shuffle_mode();
@@ -103,6 +113,72 @@ on_clock_toggle_click(void *data EINA_UNUSED, Evas_Object *obj, void *event_info
       elm_object_text_set(obj, "Clock: ON");
    else
       elm_object_text_set(obj, "Clock: OFF");
+}
+
+void
+on_quotes_toggle_click(void *data EINA_UNUSED, Evas_Object *obj, void *event_info EINA_UNUSED)
+{
+   static Eina_Bool quotes_enabled = EINA_FALSE; // default OFF
+   quotes_enabled = !quotes_enabled;
+
+   if (quotes_enabled)
+   {
+      // Start fetching and periodic refresh, show label
+      net_fetch_start();
+      net_refresh_start(60.0);
+      elm_object_text_set(obj, "Quotes: ON");
+   }
+   else
+   {
+      // Stop refresh and hide overlay
+      net_refresh_stop();
+      elm_object_text_set(obj, "Quotes: OFF");
+   }
+}
+
+// Keyboard handler to support shortcuts (Space, Left/Right, F, C, S, Escape)
+static void
+on_key_down(void *data, Evas *e EINA_UNUSED, Evas_Object *obj EINA_UNUSED, void *event_info)
+{
+   Evas_Event_Key_Down *ev = (Evas_Event_Key_Down *)event_info;
+   if (!ev || !ev->key) return;
+   const char *key = ev->key;
+
+   if (!strcasecmp(key, "space"))
+   {
+      toggle_slideshow();
+      INF("Keyboard: Toggle slideshow");
+   }
+   else if (!strcasecmp(key, "Right"))
+   {
+      show_next_media();
+      INF("Keyboard: Next media");
+   }
+   else if (!strcasecmp(key, "Left"))
+   {
+      show_prev_media();
+      INF("Keyboard: Previous media");
+   }
+   else if (!strcasecmp(key, "f"))
+   {
+      on_fullscreen_click(data, NULL, NULL);
+      INF("Keyboard: Toggle fullscreen");
+   }
+   else if (!strcasecmp(key, "c"))
+   {
+      toggle_clock();
+      INF("Keyboard: Toggle clock");
+   }
+   else if (!strcasecmp(key, "s"))
+   {
+      toggle_shuffle_mode();
+      INF("Keyboard: Toggle shuffle");
+   }
+   else if (!strcasecmp(key, "Escape"))
+   {
+      INF("Keyboard: Exit application");
+      elm_exit();
+   }
 }
 
 // Function to toggle control visibility
@@ -138,6 +214,8 @@ ui_create_main_window(Evas_Object **win_bg_out)
    // Create main window
    win = elm_win_util_standard_add("eslide", "eslide");
    evas_object_smart_callback_add(win, "delete,request", on_done, NULL);
+   // Add keyboard shortcuts handler
+   evas_object_event_callback_add(win, EVAS_CALLBACK_KEY_DOWN, on_key_down, win);
    
    // Set window background to black to match letterboxing
    Evas_Object *win_bg = elm_bg_add(win);
@@ -213,18 +291,27 @@ ui_create_controls(Evas_Object *parent_box, Evas_Object *win)
    elm_box_pack_end(parent_box, button_box);
    evas_object_hide(button_box);  // Initially hidden
 
-   // Create Toggle Slideshow button
+   // Create Toggle Slideshow button (UTF-8 play/pause symbol)
    Evas_Object *toggle_btn = elm_button_add(win);
-   elm_object_text_set(toggle_btn, "Toggle Slideshow");
+   elm_object_text_set(toggle_btn, "⏯");
    evas_object_smart_callback_add(toggle_btn, "clicked", on_button_click, NULL);
    evas_object_size_hint_weight_set(toggle_btn, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
    evas_object_size_hint_align_set(toggle_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
    elm_box_pack_end(button_box, toggle_btn);
    evas_object_show(toggle_btn);
 
-   // Create Next Image button
+   // Create Previous Image button (UTF-8 left arrow)
+   Evas_Object *prev_btn = elm_button_add(win);
+   elm_object_text_set(prev_btn, "◀");
+   evas_object_smart_callback_add(prev_btn, "clicked", on_prev_image_click, NULL);
+   evas_object_size_hint_weight_set(prev_btn, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+   evas_object_size_hint_align_set(prev_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
+   elm_box_pack_end(button_box, prev_btn);
+   evas_object_show(prev_btn);
+
+   // Create Next Image button (UTF-8 right arrow)
    Evas_Object *next_btn = elm_button_add(win);
-   elm_object_text_set(next_btn, "Next Image");
+   elm_object_text_set(next_btn, "▶");
    evas_object_smart_callback_add(next_btn, "clicked", on_next_image_click, NULL);
    evas_object_size_hint_weight_set(next_btn, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
    evas_object_size_hint_align_set(next_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
@@ -242,6 +329,15 @@ ui_create_controls(Evas_Object *parent_box, Evas_Object *win)
    evas_object_size_hint_align_set(shuffle_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
    elm_box_pack_end(button_box, shuffle_btn);
    evas_object_show(shuffle_btn);
+
+   // Create GitHub Zen Quotes toggle button (default OFF)
+   Evas_Object *quotes_btn = elm_button_add(win);
+   elm_object_text_set(quotes_btn, "Quotes: OFF");
+   evas_object_smart_callback_add(quotes_btn, "clicked", on_quotes_toggle_click, quotes_btn);
+   evas_object_size_hint_weight_set(quotes_btn, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+   evas_object_size_hint_align_set(quotes_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
+   elm_box_pack_end(button_box, quotes_btn);
+   evas_object_show(quotes_btn);
 
    // Create Clock Toggle button
    Evas_Object *clock_btn = elm_button_add(win);

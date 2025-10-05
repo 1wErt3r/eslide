@@ -4,6 +4,7 @@
 #include "slideshow.h"
 #include "clock.h"
 #include "config.h"
+#include "net.h"
 
 EAPI_MAIN int
 elm_main(int argc, char **argv)
@@ -49,6 +50,8 @@ elm_main(int argc, char **argv)
 
     // Initialize clock (using letterbox_bg as parent)
     clock_init(letterbox_bg);
+    // Initialize network overlay label
+    net_init(letterbox_bg);
     
     // Set configurable images directory before scanning
     media_set_images_dir(cfg.images_dir);
@@ -73,6 +76,8 @@ elm_main(int argc, char **argv)
     // Set fullscreen from config and show window
     elm_win_fullscreen_set(win, cfg.fullscreen);
     evas_object_show(win);
+
+    // Quotes overlay is OFF by default; enable via UI toggle
     
     // Trigger initial clock positioning
     on_letterbox_resize(NULL, NULL, letterbox_bg, NULL);
@@ -84,6 +89,7 @@ elm_main(int argc, char **argv)
     // Cleanup
     slideshow_cleanup();
     clock_cleanup();
+    net_cleanup();
     media_cleanup();
     ui_cleanup();
     common_cleanup_logging();

@@ -1,0 +1,5 @@
+*.o
+images/
+.DS_Store
+.vscode/
+eslide
