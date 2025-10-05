@@ -4,6 +4,7 @@
 Evas_Object *clock_label = NULL;
 Ecore_Timer *clock_timer = NULL;
 Eina_Bool clock_visible = EINA_FALSE;  // Clock hidden by default
+Eina_Bool clock_is_24h = EINA_FALSE;   // Default to 12-hour time
 
 // Timer callback for digital clock updates
 Eina_Bool
@@ -11,15 +12,18 @@ clock_timer_cb(void *data EINA_UNUSED)
 {
    time_t current_time;
    struct tm *time_info;
-   char time_string[6];  // HH:MM format + null terminator
+   char time_string[16];  // supports "HH:MM" or "HH:MM AM" + null
    char formatted_time[100];  // Buffer for HTML formatted time
    
    // Get current time
    time(&current_time);
    time_info = localtime(&current_time);
    
-   // Format time as HH:MM
-   strftime(time_string, sizeof(time_string), "%H:%M", time_info);
+   // Format time based on selected mode
+   if (clock_is_24h)
+      strftime(time_string, sizeof(time_string), "%H:%M", time_info);
+   else
+      strftime(time_string, sizeof(time_string), "%I:%M %p", time_info);
    
    // Create HTML formatted string with larger font and white color
    snprintf(formatted_time, sizeof(formatted_time), 
@@ -43,8 +47,9 @@ on_letterbox_resize(void *data EINA_UNUSED, Evas *e EINA_UNUSED, Evas_Object *ob
    int x, y, w, h;
    evas_object_geometry_get(obj, &x, &y, &w, &h);
    
-   // Position clock in lower right corner with padding, moved further left for larger container
-   evas_object_move(clock_label, x + w - 180, y + h - 60);
+   // Position clock in lower right corner with extra left padding to fit AM/PM
+   // Width is increased to 260, so subtract width + 20px padding
+   evas_object_move(clock_label, x + w - 280, y + h - 60);
 }
 
 // Toggle clock visibility
@@ -73,12 +78,12 @@ clock_init(Evas_Object *parent_window)
 {
    // Create digital clock label as an overlay on the letterbox
    clock_label = elm_label_add(parent_window);  // Add to window instead of letterbox for proper layering
-   elm_object_text_set(clock_label, "<font_size=72><color=#FFFFFF><b>00:00</b></color></font_size>");
+   elm_object_text_set(clock_label, "<font_size=72><color=#FFFFFF><b>12:00 AM</b></color></font_size>");
    evas_object_size_hint_weight_set(clock_label, 0.0, 0.0);
    evas_object_size_hint_align_set(clock_label, 1.0, 1.0);  // Align to bottom right
    
-   // Set size for the clock (increased further for larger 72pt font)
-   evas_object_resize(clock_label, 180, 90);
+   // Set size for the clock: widen to fit AM/PM at 72pt
+   evas_object_resize(clock_label, 260, 90);
    evas_object_layer_set(clock_label, 1000);  // Ensure it's on top
    
    // Hide clock by default (will be shown when toggled)
@@ -86,6 +91,18 @@ clock_init(Evas_Object *parent_window)
       evas_object_show(clock_label);
    else
       evas_object_hide(clock_label);
+}
+
+// Set clock format (12-hour or 24-hour)
+void
+clock_set_24h(Eina_Bool use_24h)
+{
+   clock_is_24h = use_24h;
+   // Update immediately if timer is running
+   if (clock_label)
+   {
+      clock_timer_cb(NULL);
+   }
 }
 
 // Start clock timer

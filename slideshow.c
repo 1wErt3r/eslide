@@ -11,13 +11,31 @@ Eina_Bool is_fading = EINA_FALSE;
 char *next_media_path = NULL;
 double fade_start_time = 0.0;
 
+// Runtime-configurable timings (initialized to compile-time defaults)
+static double slideshow_interval_runtime = SLIDESHOW_INTERVAL;
+static double fade_duration_runtime = FADE_DURATION;
+
+void
+slideshow_set_interval(double seconds)
+{
+   if (seconds > 0.0)
+      slideshow_interval_runtime = seconds;
+}
+
+void
+slideshow_set_fade_duration(double seconds)
+{
+   if (seconds > 0.0)
+      fade_duration_runtime = seconds;
+}
+
 // Fade animation callback function
 Eina_Bool
 fade_animator_cb(void *data EINA_UNUSED)
 {
    double current_time = ecore_time_get();
    double elapsed = current_time - fade_start_time;
-   double progress = elapsed / FADE_DURATION;
+   double progress = elapsed / fade_duration_runtime;
    
    // Calculate fade effect
    int alpha;
@@ -309,8 +327,8 @@ slideshow_start(void)
       }
       
       // Start slideshow timer
-      slideshow_timer = ecore_timer_add(SLIDESHOW_INTERVAL, slideshow_timer_cb, NULL);
-      INF("Slideshow timer started with %f second interval", SLIDESHOW_INTERVAL);
+      slideshow_timer = ecore_timer_add(slideshow_interval_runtime, slideshow_timer_cb, NULL);
+      INF("Slideshow timer started with %f second interval", slideshow_interval_runtime);
    }
    else
    {

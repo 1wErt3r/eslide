@@ -21,6 +21,9 @@ char* get_media_path_at_index(int index);
 // Media file list cleanup
 void media_cleanup(void);
 
+// Runtime configuration setter
+void media_set_images_dir(const char *path);
+
 // Global media file list (to be accessed by other modules)
 extern Eina_List *media_files;
 extern int current_media_index;

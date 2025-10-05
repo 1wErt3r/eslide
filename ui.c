@@ -56,8 +56,10 @@ on_fullscreen_click(void *data, Evas_Object *obj EINA_UNUSED, void *event_info E
    }
    else
    {
-      INF("Switched to windowed mode");
-      printf("Switched to windowed mode\n");
+      // Set window size to 640x480 when switching to windowed mode
+      evas_object_resize(win, 640, 480);
+      INF("Switched to windowed mode (640x480)");
+      printf("Switched to windowed mode (640x480)\n");
    }
 }
 

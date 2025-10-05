@@ -4,6 +4,16 @@
 Eina_List *media_files = NULL;
 int current_media_index = 0;
 
+// Runtime-configurable images directory
+static const char *images_dir_runtime = IMAGES_DIR;
+
+void
+media_set_images_dir(const char *path)
+{
+   if (path && *path)
+      images_dir_runtime = path;
+}
+
 // Function to check if a file has an image extension
 Eina_Bool
 is_image_file(const char *filename)
@@ -63,10 +73,10 @@ scan_media_files(void)
    }
    media_files = NULL;
    
-   dir = opendir(IMAGES_DIR);
+   dir = opendir(images_dir_runtime);
    if (!dir)
    {
-      ERR("Could not open images directory: %s", IMAGES_DIR);
+      ERR("Could not open images directory: %s", images_dir_runtime);
       return;
    }
    
@@ -80,7 +90,7 @@ scan_media_files(void)
       if (is_media_file(entry->d_name))
       {
          eina_strbuf_reset(filepath_buf);
-         eina_strbuf_append(filepath_buf, IMAGES_DIR);
+         eina_strbuf_append(filepath_buf, images_dir_runtime);
          eina_strbuf_append(filepath_buf, entry->d_name);
          filepath = strdup(eina_strbuf_string_get(filepath_buf));
          
@@ -117,7 +127,7 @@ scan_media_files(void)
    
    if (eina_list_count(media_files) == 0)
    {
-      WRN("No media files found in %s", IMAGES_DIR);
+      WRN("No media files found in %s", images_dir_runtime);
    }
    else
    {

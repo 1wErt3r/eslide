@@ -38,4 +38,8 @@ void slideshow_init(Evas_Object *image_widget, Evas_Object *video_widget, Evas_O
 void slideshow_start(void);
 void slideshow_cleanup(void);
 
+// Runtime configuration setters
+void slideshow_set_interval(double seconds);
+void slideshow_set_fade_duration(double seconds);
+
 #endif /* SLIDESHOW_H */
