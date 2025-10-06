@@ -11,6 +11,8 @@ Ecore_Animator *fade_animator = NULL;
 Eina_Bool is_fading = EINA_FALSE;
 char *next_media_path = NULL;
 double fade_start_time = 0.0;
+// Dedicated overlay to guarantee smooth crossfade independent of media load
+static Evas_Object *fade_overlay = NULL;
 
 // Runtime-configurable timings (initialized to compile-time defaults)
 static double slideshow_interval_runtime = SLIDESHOW_INTERVAL;
@@ -20,6 +22,34 @@ static double fade_duration_runtime = FADE_DURATION;
 static Evas_Object *preload_img = NULL;
 // Navigation coalescing: queue next/prev requests during active fade
 static int pending_nav = 0; // 0 = none, 1 = next, -1 = prev
+
+// Ensure the fade overlay exists and is configured
+static void _ensure_fade_overlay(void)
+{
+   if (fade_overlay) return;
+   if (!letterbox_bg) return;
+
+   Evas *evas = evas_object_evas_get(letterbox_bg);
+   if (!evas) return;
+
+   fade_overlay = evas_object_rectangle_add(evas);
+   // Start fully transparent black
+   evas_object_color_set(fade_overlay, 0, 0, 0, 0);
+   // Do not block input beneath
+   evas_object_pass_events_set(fade_overlay, EINA_TRUE);
+   // Keep overlay above content
+   evas_object_raise(fade_overlay);
+}
+
+// Match overlay geometry to the letterbox area
+static void _update_fade_overlay_geometry(void)
+{
+   if (!fade_overlay || !letterbox_bg) return;
+   Evas_Coord x, y, w, h;
+   evas_object_geometry_get(letterbox_bg, &x, &y, &w, &h);
+   evas_object_move(fade_overlay, x, y);
+   evas_object_resize(fade_overlay, w, h);
+}
 
 // Helper to determine next index without mutating current state
 static int _compute_next_index(void)
@@ -109,8 +139,13 @@ fade_animator_cb(void *data EINA_UNUSED)
    double current_time = ecore_time_get();
    double elapsed = current_time - fade_start_time;
    double progress = elapsed / fade_duration_runtime;
+   if (progress < 0.0) progress = 0.0;
+   if (progress > 1.0) progress = 1.0;
+   // Smoothstep easing for extra smooth fade
+   double t = progress;
+   double eased = t * t * (3.0 - 2.0 * t);
    
-   // Calculate fade effect
+   // Calculate fade effect for overlay
    int alpha;
    
    if (next_media_path)
@@ -120,11 +155,10 @@ fade_animator_cb(void *data EINA_UNUSED)
       {
          // Fade out complete - switch to new media and start fade in
          progress = 1.0;
-         alpha = 0;  // Fully faded out
-         
-         // Apply final fade out (premultiplied colors)
-          evas_object_color_set(slideshow_image, alpha, alpha, alpha, alpha);
-          evas_object_color_set(slideshow_video, alpha, alpha, alpha, alpha);
+         // Keep overlay fully opaque during swap
+         alpha = 255;
+         if (fade_overlay)
+            evas_object_color_set(fade_overlay, 0, 0, 0, alpha);
          
          // Load the new media
          if (is_image_file(next_media_path))
@@ -160,14 +194,12 @@ fade_animator_cb(void *data EINA_UNUSED)
       }
       else
       {
-         // Fading out - decrease alpha
-         alpha = (int)(255 * (1.0 - progress));
+         // Fading out - increase overlay alpha smoothly
+         alpha = (int)(255 * eased);
          if (alpha < 0) alpha = 0;
          if (alpha > 255) alpha = 255;
-         
-         // Apply alpha to current visible media (premultiplied colors)
-          evas_object_color_set(slideshow_image, alpha, alpha, alpha, alpha);
-          evas_object_color_set(slideshow_video, alpha, alpha, alpha, alpha);
+         if (fade_overlay)
+            evas_object_color_set(fade_overlay, 0, 0, 0, alpha);
       }
    }
    else
@@ -175,10 +207,12 @@ fade_animator_cb(void *data EINA_UNUSED)
       // Phase 2: Fading in new media
       if (progress >= 1.0)
       {
-         // Fade in complete (premultiplied colors)
-          alpha = 255;
-          evas_object_color_set(slideshow_image, alpha, alpha, alpha, alpha);
-          evas_object_color_set(slideshow_video, alpha, alpha, alpha, alpha);
+         // Fade in complete - hide overlay
+         alpha = 0;
+         if (fade_overlay)
+            evas_object_color_set(fade_overlay, 0, 0, 0, alpha);
+         if (fade_overlay)
+            evas_object_hide(fade_overlay);
 
          // Animation complete
          fade_animator = NULL;
@@ -196,14 +230,12 @@ fade_animator_cb(void *data EINA_UNUSED)
       }
       else
       {
-         // Fading in - increase alpha
-         alpha = (int)(255 * progress);
+         // Fading in - decrease overlay alpha smoothly
+         alpha = (int)(255 * (1.0 - eased));
          if (alpha < 0) alpha = 0;
          if (alpha > 255) alpha = 255;
-         
-         // Apply alpha to current visible media (premultiplied colors)
-          evas_object_color_set(slideshow_image, alpha, alpha, alpha, alpha);
-          evas_object_color_set(slideshow_video, alpha, alpha, alpha, alpha);
+         if (fade_overlay)
+            evas_object_color_set(fade_overlay, 0, 0, 0, alpha);
       }
    }
    
@@ -219,6 +251,18 @@ start_fade_transition(const char *media_path)
    is_fading = EINA_TRUE;
    next_media_path = strdup(media_path);
    fade_start_time = ecore_time_get();
+
+   // Ensure and prepare overlay for crossfade
+   _ensure_fade_overlay();
+   _update_fade_overlay_geometry();
+   if (fade_overlay)
+   {
+      // Start transparent and show overlay; animator will raise alpha
+      evas_object_color_set(fade_overlay, 0, 0, 0, 0);
+      evas_object_show(fade_overlay);
+      // Keep overlay above content
+      evas_object_raise(fade_overlay);
+   }
 
    if (fade_animator)
       ecore_animator_del(fade_animator);
@@ -373,6 +417,15 @@ show_media_immediate(const char *media_path)
       }
    }
 
+   // Make sure overlay is hidden for immediate show
+   _ensure_fade_overlay();
+   _update_fade_overlay_geometry();
+   if (fade_overlay)
+   {
+      evas_object_color_set(fade_overlay, 0, 0, 0, 0);
+      evas_object_hide(fade_overlay);
+   }
+
    // Update compact progress overlay for the initially shown media
    // Use current_media_index and the loaded media list count
    ui_progress_update_index(current_media_index, eina_list_count(media_files));
@@ -436,6 +489,10 @@ slideshow_init(Evas_Object *image_widget, Evas_Object *video_widget, Evas_Object
    letterbox_bg = letterbox;
    printf("slideshow_init completed - stored image: %p, video: %p, letterbox: %p\n", 
           slideshow_image, slideshow_video, letterbox_bg);
+
+   // Prepare overlay now that letterbox is available
+   _ensure_fade_overlay();
+   _update_fade_overlay_geometry();
 }
 
 // Start slideshow timer
@@ -521,6 +578,13 @@ slideshow_cleanup(void)
    {
       evas_object_del(preload_img);
       preload_img = NULL;
+   }
+
+   // Cleanup fade overlay
+   if (fade_overlay)
+   {
+      evas_object_del(fade_overlay);
+      fade_overlay = NULL;
    }
 }
 

@@ -1,26 +1,20 @@
-# ESlide - EFL Media Slideshow Application
+# eslide - EFL Media Slideshow Application
 
 A media slideshow application built with Enlightenment Foundation Libraries (EFL), featuring automatic image/video playback, smooth transitions, and interactive controls.
 
-## Project Overview
+It is intended to be used as digital picture frame software, but can also be used for general media presentations. It automatically cycles through images and videos in the `./images/` directory. It provides a slideshow experience with smooth fade transitions, media controls, and an optional digital clock display.
 
-ESlide is a full-screen media presentation application that automatically cycles through images and videos in the `./images/` directory. It provides a slideshow experience with smooth fade transitions, media controls, and an optional digital clock display.
-
-### Key Features
+## Key Features
 
 - **Automatic Slideshow**: Cycles through media files every 10 seconds
-- **Media Support**: Handles both images (JPEG, PNG, GIF) and videos (MP4, AVI, MOV)
+- **Media Support**: Handles both images and videos
 - **Smooth Transitions**: 0.5-second fade transitions between media items
 - **Interactive Controls**: On-screen controls for navigation and settings
 - **Shuffle Mode**: Randomize playback order
-- **Fullscreen Display**: Professional full-screen presentation mode
+- **Fullscreen Display**: Full-screen presentation mode
 - **Digital Clock**: Optional clock overlay with automatic positioning
-- **Lock-Screen Clock**: Date above time, time rendered larger for clarity
 - **Web Message Overlay**: Fetches a short message from the internet at startup
-- **Media Detection**: Automatically scans and catalogs media files
-- **Keyboard/Mouse Support**: Toggle controls and navigate media
-- **Image Preloading**: Preloads the next image with `evas_object_image_preload` to reduce stutter
-- **Debounced Navigation**: Guards and coalesces next/prev inputs during active fades
+- **Media Detection**: Automatically scans `./images/` directory for supported media files
 
 ## Architecture
 
@@ -88,8 +82,6 @@ ESlide is a full-screen media presentation application that automatically cycles
 - **EFL (Enlightenment Foundation Libraries)** 
 - **pkg-config** for dependency management
 - **GCC compiler** with C99 support
-- **Emotion** library (for video playback support)
-- **Eet** library (for configuration persistence)
 
 ### Building the Application
 
@@ -186,42 +178,7 @@ Note: These options are applied at runtime. Slideshow interval and fade duration
 
 ### Performance Characteristics
 
-- **Memory Usage**: Efficient media loading with proper cleanup
-- **Transition Performance**: Hardware-accelerated fade animations
-- **File Scanning**: Optimized directory traversal
-- **Resource Management**: Proper cleanup and error handling
-- **Preloading**: Hidden Evas image warms cache for the upcoming image to minimize visual stutter
-- **Input Debounce**: Next/prev presses during a fade are queued and executed after the transition
-
-### Error Handling
-
-- Graceful fallback for unsupported media formats
-- Automatic recovery from corrupted files
-- Comprehensive logging for debugging
-- Safe cleanup on application exit
-
 ## Development Information
-
-### Code Structure
-
-```
-eslide/
-├── main.c              # Application entry point
-├── ui.c/h              # User interface components
-├── slideshow.c/h       # Slideshow engine
-├── media.c/h           # Media file management
-├── clock.c/h           # Digital clock functionality
-├── common.c/h          # Shared utilities and logging
-├── Makefile           # Build configuration
-└── images/            # Media content directory
-```
-
-### Adding New Features
-
-1. **New Media Types**: Extend `is_media_file()` in `media.c`
-2. **New Controls**: Add buttons to `ui_create_controls()`
-3. **New Transitions**: Implement in `slideshow.c`
-4. **New Modules**: Follow existing module pattern with init/cleanup functions
 
 ### Transition Preloading and Input Debounce
 
@@ -254,25 +211,8 @@ export EINA_LOG_LEVEL=4
 ./eslide
 ```
 
-## Troubleshooting
-
-### Common Issues
-
-**GL Extension Warning on macOS**: Normal and doesn't affect functionality
-**Missing Dependencies**: Run `make check-deps` to verify installation
-**Media Not Loading**: Check file permissions and supported formats
-**Black Screen**: Verify media files exist in `./images/` directory
-
-### Platform-Specific Notes
-
-- **macOS**: May require additional EFL configuration
-- **Linux**: Ensure video codecs are installed for video playback
-- **Windows**: Use WSL or Cygwin for compilation
-
 ## License and Credits
 
-Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/)
+This application is licensed under the two-clause BSD license.
 
-EFL Version Tested: 1.28.1
-
----
+Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/). 
