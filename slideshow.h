@@ -42,6 +42,8 @@ void slideshow_cleanup(void);
 // Runtime configuration setters
 void slideshow_set_interval(double seconds);
 void slideshow_set_fade_duration(double seconds);
+double slideshow_get_interval(void);
+double slideshow_get_fade_duration(void);
 
 // Convenience alias for previous navigation
 void slideshow_prev(void);

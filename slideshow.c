@@ -90,6 +90,18 @@ slideshow_set_fade_duration(double seconds)
       fade_duration_runtime = seconds;
 }
 
+double
+slideshow_get_interval(void)
+{
+   return slideshow_interval_runtime;
+}
+
+double
+slideshow_get_fade_duration(void)
+{
+   return fade_duration_runtime;
+}
+
 // Fade animation callback function
 Eina_Bool
 fade_animator_cb(void *data EINA_UNUSED)

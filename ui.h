@@ -34,5 +34,7 @@ void ui_cleanup(void);
 // Progress overlay API
 void ui_progress_update_index(int index, int count);
 void ui_progress_set_visible(Eina_Bool visible);
+// UI state accessors
+Eina_Bool ui_is_fullscreen(void);
 
 #endif /* UI_H */

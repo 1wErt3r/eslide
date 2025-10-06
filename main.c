@@ -11,12 +11,22 @@ elm_main(int argc, char **argv)
 {
     Evas_Object *win, *win_bg, *box;
     App_Config cfg;
+    const char *cfg_path = "./eslide.cfg";
     
     // Initialize logging
     common_init_logging();
     
-    // Parse command-line options (defaults preserved) and log them
-    cfg = config_parse(argc, argv);
+    // Initialize Eet and load persisted config (same folder as executable)
+    config_eet_init();
+    cfg = config_defaults();
+    App_Config loaded;
+    if (config_load_from_eet(&loaded, cfg_path)) {
+        cfg = loaded;
+        INF("Loaded persisted configuration");
+    }
+
+    // Merge command-line options over loaded/default config and log
+    config_merge_cli(&cfg, argc, argv);
     config_log(&cfg);
 
     // Apply initial UI state from parsed config before creating controls
@@ -86,17 +96,29 @@ elm_main(int argc, char **argv)
     INF("Starting main loop");
     elm_run();
     
+    // Before cleanup, persist current settings to Eet file
+    // Capture latest runtime values from modules
+    cfg.slideshow_interval = slideshow_get_interval();
+    cfg.fade_duration = slideshow_get_fade_duration();
+    cfg.fullscreen = ui_is_fullscreen();
+    cfg.shuffle = is_shuffle_mode;
+    cfg.clock_visible = clock_visible;
+    cfg.clock_24h = clock_is_24h;
+    config_save_to_eet(&cfg, cfg_path);
+
     // Cleanup
     slideshow_cleanup();
     clock_cleanup();
     net_cleanup();
     media_cleanup();
     ui_cleanup();
+    config_eet_shutdown();
     common_cleanup_logging();
     
     return 0;
     
 error:
+    config_eet_shutdown();
     common_cleanup_logging();
     return -1;
 }

@@ -12,9 +12,9 @@ OBJECTS = $(SOURCES:.c=.o)
 # Compiler
 CC = gcc
 
-# Get EFL compilation flags using pkg-config
-CFLAGS = `pkg-config --cflags elementary emotion ecore-con`
-LDFLAGS = `pkg-config --libs elementary emotion ecore-con`
+# Get EFL compilation flags using pkg-config (add Eet for persistence)
+CFLAGS = `pkg-config --cflags elementary emotion ecore-con eet`
+LDFLAGS = `pkg-config --libs elementary emotion ecore-con eet`
 
 # Additional compiler flags for cross-platform compatibility
 CFLAGS += -Wall -Wextra -std=c99

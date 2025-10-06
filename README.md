@@ -15,9 +15,12 @@ ESlide is a full-screen media presentation application that automatically cycles
 - **Shuffle Mode**: Randomize playback order
 - **Fullscreen Display**: Professional full-screen presentation mode
 - **Digital Clock**: Optional clock overlay with automatic positioning
+- **Lock-Screen Clock**: Date above time, time rendered larger for clarity
 - **Web Message Overlay**: Fetches a short message from the internet at startup
 - **Media Detection**: Automatically scans and catalogs media files
 - **Keyboard/Mouse Support**: Toggle controls and navigate media
+- **Image Preloading**: Preloads the next image with `evas_object_image_preload` to reduce stutter
+- **Debounced Navigation**: Guards and coalesces next/prev inputs during active fades
 
 ## Architecture
 
@@ -33,6 +36,7 @@ ESlide is a full-screen media presentation application that automatically cycles
 - Control panel with interactive buttons
 - Event handling for user interactions
 - Fullscreen and window management
+- Compact progress overlay showing "current/total" anchored to content
 
 #### 3. **Slideshow Engine (`slideshow.c/h`)**
 - Automatic media progression with configurable timing
@@ -58,6 +62,17 @@ ESlide is a full-screen media presentation application that automatically cycles
 - Shared data structures
 - Cross-platform compatibility macros
 
+#### 7. **Network Overlay (`net.c/h`)**
+- Asynchronous HTTP fetch using `Ecore_Con_Url`
+- Overlay label positioned relative to content
+- One-shot fetch and optional periodic refresh
+- Simple start/stop lifecycle and cleanup
+
+#### 8. **Configuration and Persistence (`config.c/h`)**
+- Runtime parsing of CLI options via `Ecore_Getopt`
+- Eet-based serialization to `./eslide.cfg`
+- Load persisted settings at startup, override with CLI, save on exit
+
 ### Data Flow
 
 1. **Initialization**: Application scans `./images/` directory for media files
@@ -74,6 +89,7 @@ ESlide is a full-screen media presentation application that automatically cycles
 - **pkg-config** for dependency management
 - **GCC compiler** with C99 support
 - **Emotion** library (for video playback support)
+- **Eet** library (for configuration persistence)
 
 ### Building the Application
 
@@ -121,6 +137,8 @@ Place your image and video files in the `./images/` directory:
 - **Next**: Skip to next media item
 - **Shuffle**: Toggle random playback order
 - **Clock**: Toggle digital clock display
+- **Progress**: Toggle compact "index/total" overlay
+- **Quotes**: Toggle network overlay and periodic refresh
 - **Fullscreen**: Toggle fullscreen mode
 - **Close**: Exit application
 
@@ -145,6 +163,7 @@ You can override defaults at startup using flags:
 - `--fullscreen` / `--no-fullscreen` — start fullscreen or windowed
 - `--shuffle` / `--no-shuffle` — enable or disable shuffle mode
 - `--clock` / `--no-clock` — show or hide the clock overlay
+- `--clock-24h` / `--clock-12h` — select 24-hour or 12-hour time format
 - `--version` or `-V` — print version information
 - `--help` or `-h` — show help
 
@@ -156,16 +175,7 @@ Examples:
 ./eslide --no-fullscreen --no-shuffle
 ```
 
-Note: These options are parsed and logged at startup. Core behavior still uses compile-time defaults until modules are fully wired to use parsed values.
-
-### Configuration Options
-
-Edit `common.h` to customize:
-```c
-#define SLIDESHOW_INTERVAL 10.0  // Seconds between transitions
-#define FADE_DURATION 0.5        // Fade transition duration
-#define IMAGES_DIR "./images/"  // Media directory path
-```
+Note: These options are applied at runtime. Slideshow interval and fade duration take effect immediately.
 
 ## Technical Details
 
@@ -180,6 +190,8 @@ Edit `common.h` to customize:
 - **Transition Performance**: Hardware-accelerated fade animations
 - **File Scanning**: Optimized directory traversal
 - **Resource Management**: Proper cleanup and error handling
+- **Preloading**: Hidden Evas image warms cache for the upcoming image to minimize visual stutter
+- **Input Debounce**: Next/prev presses during a fade are queued and executed after the transition
 
 ### Error Handling
 
@@ -211,15 +223,28 @@ eslide/
 3. **New Transitions**: Implement in `slideshow.c`
 4. **New Modules**: Follow existing module pattern with init/cleanup functions
 
-### Network Fetch Example
+### Transition Preloading and Input Debounce
 
-On application startup, ESlide performs a simple asynchronous HTTP GET request using `Ecore_Con_Url` to fetch a short text message from a public API.
+- The slideshow engine uses a hidden Evas image and `evas_object_image_preload` to cache the next image as soon as a fade begins. This reduces disk I/O stalls and visual stuttering when switching media.
+- During fade transitions, navigation is guarded by an `is_fading` flag. Rapid next/prev inputs are coalesced into a single pending navigation that runs immediately after the fade completes, preventing overlapping transitions.
 
+### Network Overlay
+
+The application can fetch and display a short message from the internet:
 - Endpoint: `https://api.github.com/zen`
-- Display: A small white text label in the top-left overlay
-- Behavior: Request starts after the window is shown; text updates automatically when the response arrives
+- Display: Small white text label in the top-left overlay
+- Behavior: Starts a fetch after the window is shown; you can enable periodic refresh (default 60 seconds) via the Quotes control
 
-Dependencies: Ensure `ecore-con` is available via `pkg-config` (added to the Makefile).
+Dependencies: Ensure `ecore-con` is available via `pkg-config`.
+
+### Configuration Persistence
+
+Settings are persisted using Eet in a file next to the executable:
+- Path: `./eslide.cfg`
+- Startup: Load persisted settings, then merge CLI overrides
+- Shutdown: Save last-used settings (interval, fade, images dir, fullscreen, shuffle, clock visibility, 12/24h)
+
+This allows the app to remember your preferences between runs.
 
 ### Debugging
 

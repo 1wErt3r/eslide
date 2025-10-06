@@ -1,6 +1,7 @@
 #include <string.h>
 #include <Ecore.h>
 #include <Ecore_Getopt.h>
+#include <Eet.h>
 #include "common.h"
 #include "config.h"
 
@@ -43,18 +44,102 @@ static const Ecore_Getopt _opts = {
     }
 };
 
-App_Config
-config_parse(int argc, char **argv)
-{
-    App_Config cfg = config_defaults();
+// Eet data descriptor for App_Config
+static Eet_Data_Descriptor *_cfg_edd = NULL;
 
-    double interval = cfg.slideshow_interval;
-    double fade = cfg.fade_duration;
-    char *images_dir = (char *)cfg.images_dir;
-    Eina_Bool fullscreen = cfg.fullscreen;
-    Eina_Bool shuffle = cfg.shuffle;
-    Eina_Bool clock = cfg.clock_visible;
-    Eina_Bool clock_24h = cfg.clock_24h;
+static void
+_config_edd_setup(void)
+{
+    if (_cfg_edd) return;
+    Eet_Data_Descriptor_Class eddc;
+    EET_EINA_STREAM_DATA_DESCRIPTOR_CLASS_SET(&eddc, App_Config);
+    _cfg_edd = eet_data_descriptor_stream_new(&eddc);
+    if (!_cfg_edd) {
+        ERR("Failed to create Eet data descriptor for App_Config");
+        return;
+    }
+    EET_DATA_DESCRIPTOR_ADD_BASIC(_cfg_edd, App_Config, "slideshow_interval", slideshow_interval, EET_T_DOUBLE);
+    EET_DATA_DESCRIPTOR_ADD_BASIC(_cfg_edd, App_Config, "fade_duration", fade_duration, EET_T_DOUBLE);
+    EET_DATA_DESCRIPTOR_ADD_BASIC(_cfg_edd, App_Config, "images_dir", images_dir, EET_T_STRING);
+    EET_DATA_DESCRIPTOR_ADD_BASIC(_cfg_edd, App_Config, "fullscreen", fullscreen, EET_T_INT);
+    EET_DATA_DESCRIPTOR_ADD_BASIC(_cfg_edd, App_Config, "shuffle", shuffle, EET_T_INT);
+    EET_DATA_DESCRIPTOR_ADD_BASIC(_cfg_edd, App_Config, "clock_visible", clock_visible, EET_T_INT);
+    EET_DATA_DESCRIPTOR_ADD_BASIC(_cfg_edd, App_Config, "clock_24h", clock_24h, EET_T_INT);
+}
+
+void
+config_eet_init(void)
+{
+    if (eet_init() == 0) {
+        INF("Eet initialized");
+    }
+    _config_edd_setup();
+}
+
+void
+config_eet_shutdown(void)
+{
+    if (_cfg_edd) {
+        eet_data_descriptor_free(_cfg_edd);
+        _cfg_edd = NULL;
+    }
+    eet_shutdown();
+}
+
+Eina_Bool
+config_load_from_eet(App_Config *out_cfg, const char *path)
+{
+    if (!out_cfg || !path) return EINA_FALSE;
+    _config_edd_setup();
+    Eet_File *ef = eet_open(path, EET_FILE_MODE_READ);
+    if (!ef) {
+        INF("No config file at %s; using defaults", path);
+        return EINA_FALSE;
+    }
+    App_Config *read_cfg = eet_data_read(ef, _cfg_edd, "config");
+    eet_close(ef);
+    if (!read_cfg) {
+        WRN("Failed to read config from %s", path);
+        return EINA_FALSE;
+    }
+    *out_cfg = *read_cfg;
+    free(read_cfg);
+    return EINA_TRUE;
+}
+
+Eina_Bool
+config_save_to_eet(const App_Config *cfg, const char *path)
+{
+    if (!cfg || !path) return EINA_FALSE;
+    _config_edd_setup();
+    Eet_File *ef = eet_open(path, EET_FILE_MODE_WRITE);
+    if (!ef) {
+        ERR("Failed to open %s for writing", path);
+        return EINA_FALSE;
+    }
+    int ok = eet_data_write(ef, _cfg_edd, "config", cfg, EET_COMPRESSION_DEFAULT);
+    eet_close(ef);
+    if (!ok) {
+        ERR("Failed to write config to %s", path);
+        return EINA_FALSE;
+    }
+    INF("Config saved to %s", path);
+    return EINA_TRUE;
+}
+
+// Parse command-line arguments, merging over an existing cfg in-place
+void
+config_merge_cli(App_Config *cfg, int argc, char **argv)
+{
+    if (!cfg) return;
+
+    double interval = cfg->slideshow_interval;
+    double fade = cfg->fade_duration;
+    char *images_dir = (char *)cfg->images_dir;
+    Eina_Bool fullscreen = cfg->fullscreen;
+    Eina_Bool shuffle = cfg->shuffle;
+    Eina_Bool clock = cfg->clock_visible;
+    Eina_Bool clock_24h = cfg->clock_24h;
 
     Ecore_Getopt_Value values[] = {
         ECORE_GETOPT_VALUE_DOUBLE(interval),
@@ -77,18 +162,25 @@ config_parse(int argc, char **argv)
     if (args < 0)
     {
         WRN("Failed to parse command-line options");
-        return cfg; // return defaults
+        return; // leave cfg unchanged on parse failure
     }
 
-    // Update cfg with parsed values
-    cfg.slideshow_interval = interval;
-    cfg.fade_duration = fade;
-    if (images_dir) cfg.images_dir = images_dir;
-    cfg.fullscreen = fullscreen;
-    cfg.shuffle = shuffle;
-    cfg.clock_visible = clock;
-    cfg.clock_24h = clock_24h;
+    // Merge back into cfg
+    cfg->slideshow_interval = interval;
+    cfg->fade_duration = fade;
+    if (images_dir) cfg->images_dir = images_dir;
+    cfg->fullscreen = fullscreen;
+    cfg->shuffle = shuffle;
+    cfg->clock_visible = clock;
+    cfg->clock_24h = clock_24h;
+}
 
+// Retain original API for callers expecting a full parse from defaults
+App_Config
+config_parse(int argc, char **argv)
+{
+    App_Config cfg = config_defaults();
+    config_merge_cli(&cfg, argc, argv);
     return cfg;
 }
 

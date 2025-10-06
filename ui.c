@@ -509,6 +509,12 @@ ui_progress_update_index(int index, int count)
       evas_object_show(progress_label);
 }
 
+Eina_Bool
+ui_is_fullscreen(void)
+{
+   return is_fullscreen;
+}
+
 void
 ui_progress_set_visible(Eina_Bool visible)
 {
