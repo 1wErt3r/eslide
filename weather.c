@@ -3,6 +3,9 @@
 #include <Elementary.h>
 #include <Ecore.h>
 #include <Ecore_Con.h>
+#include <libxml/parser.h>
+#include <libxml/tree.h>
+#include <libxml/xpath.h>
 
 // Weather state variables
 Evas_Object* weather_label = NULL;
@@ -24,7 +27,7 @@ static WeatherBuf _wbuf = { NULL, 0 };
 // Forward declarations
 static Eina_Bool _weather_fetch_cb(void* data);
 static void _weather_update_label(const char* text);
-static void _weather_parse_json_and_update(const char* json, size_t len);
+static void _weather_parse_xml_and_update(const char* xml, size_t len);
 static void _weather_process_response(const char* buf, size_t len);
 
 // Ecore_Con URL event handlers
@@ -118,55 +121,77 @@ static void _weather_update_label(const char* text)
         evas_object_show(weather_label);
 }
 
-// Decide whether buffer is XML or JSON and parse accordingly
+// Process XML response from NOAA API
 static void _weather_process_response(const char* buf, size_t len)
 {
     if (!buf || len == 0)
         return;
 
-    DBG("Weather: processing JSON response");
-    _weather_parse_json_and_update(buf, len);
+    DBG("Weather: processing XML response");
+    _weather_parse_xml_and_update(buf, len);
 }
 
 
-// Extract properties.temperature.value (degC) from api.weather.gov JSON without external deps
-static void _weather_parse_json_and_update(const char* json, size_t len)
+// Extract temperature from NOAA XML response using libxml2
+static void _weather_parse_xml_and_update(const char* xml, size_t len)
 {
-    if (!json || len == 0)
+    if (!xml || len == 0)
         return;
-    const char* base = json;
-    const char* t = strstr(base, "\"temperature\"");
-    if (!t) {
-        WRN("Weather: JSON temperature object not found");
-        return;
-    }
-    const char* vkey = strstr(t, "\"value\"");
-    if (!vkey) {
-        WRN("Weather: JSON temperature value not found");
+
+    // Initialize libxml2 parser
+    xmlDocPtr doc = xmlParseMemory(xml, (int) len);
+    if (!doc) {
+        WRN("Weather: failed to parse XML response");
         return;
     }
-    const char* colon = strchr(vkey, ':');
-    if (!colon) {
-        WRN("Weather: JSON parsing error (no colon)");
+
+    xmlNodePtr root = xmlDocGetRootElement(doc);
+    if (!root) {
+        WRN("Weather: no root element in XML");
+        xmlFreeDoc(doc);
         return;
     }
-    const char* v = colon + 1;
-    while (*v == ' ' || *v == '\n' || *v == '\r' || *v == '\t')
-        v++;
-    if (strncmp(v, "null", 4) == 0) {
-        WRN("Weather: temperature value is null");
+
+    // Use XPath to find the temp_f element
+    xmlXPathContextPtr xpath_ctx = xmlXPathNewContext(doc);
+    if (!xpath_ctx) {
+        WRN("Weather: failed to create XPath context");
+        xmlFreeDoc(doc);
         return;
     }
-    char* endptr = NULL;
-    double celsius = strtod(v, &endptr);
-    if (endptr == v) {
-        WRN("Weather: failed to parse numeric temperature");
+
+    xmlXPathObjectPtr xpath_obj = xmlXPathEvalExpression((const xmlChar*) "//temp_f", xpath_ctx);
+    if (!xpath_obj) {
+        WRN("Weather: XPath evaluation failed");
+        xmlXPathFreeContext(xpath_ctx);
+        xmlFreeDoc(doc);
         return;
     }
-    double fahrenheit = (celsius * 9.0 / 5.0) + 32.0;
-    char label[64];
-    snprintf(label, sizeof(label), "%.1f°F", fahrenheit);
-    _weather_update_label(label);
+
+    if (xpath_obj->nodesetval && xpath_obj->nodesetval->nodeNr > 0) {
+        xmlNodePtr temp_node = xpath_obj->nodesetval->nodeTab[0];
+        xmlChar* temp_content = xmlNodeGetContent(temp_node);
+        if (temp_content) {
+            char* endptr = NULL;
+            double fahrenheit = strtod((const char*) temp_content, &endptr);
+            if (endptr != (const char*) temp_content) {
+                char label[64];
+                snprintf(label, sizeof(label), "%.1f°F", fahrenheit);
+                _weather_update_label(label);
+                INF("Weather: parsed temperature %.1f°F from XML using XPath", fahrenheit);
+            } else {
+                WRN("Weather: failed to parse temperature value from XML");
+            }
+            xmlFree(temp_content);
+        }
+    } else {
+        WRN("Weather: temp_f element not found in XML response");
+    }
+
+    xmlXPathFreeObject(xpath_obj);
+    xmlXPathFreeContext(xpath_ctx);
+
+    xmlFreeDoc(doc);
 }
 
 // Timer callback: trigger a fetch
@@ -191,7 +216,7 @@ static Eina_Bool _weather_fetch_cb(void* data EINA_UNUSED)
         }
         ecore_con_url_timeout_set(weather_url, 8.0);
         ecore_con_url_additional_header_add(weather_url, "User-Agent", "eslide/1.0 (efl-hello)");
-        ecore_con_url_additional_header_add(weather_url, "Accept", "application/json");
+        ecore_con_url_additional_header_add(weather_url, "Accept", "application/vnd.noaa.obs+xml");
     }
 
     // Make sure our event handlers are registered.
@@ -279,6 +304,9 @@ void weather_start(void)
     } else {
         INF("Ecore_Con_Url initialized");
     }
+    // Initialize libxml2
+    xmlInitParser();
+    INF("libxml2 initialized for XML parsing");
     _weather_fetch_cb(NULL);
     if (weather_timer) {
         ecore_timer_del(weather_timer);
@@ -336,6 +364,8 @@ void weather_cleanup(void)
     _wbuf.buf = NULL;
     _wbuf.len = 0;
     weather_label = NULL;
+    // Cleanup libxml2
+    xmlCleanupParser();
     // Shutdown Ecore_Con after we're done
     ecore_con_url_shutdown();
     ecore_con_shutdown();

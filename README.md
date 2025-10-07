@@ -75,6 +75,7 @@ It is intended to be used as digital picture frame software, but can also be use
 ### Prerequisites
 
 - **EFL (Enlightenment Foundation Libraries)** 
+- **libxml2** for XML parsing (weather data)
 - **pkg-config** for dependency management
 - **GCC compiler** with C99 support
 
@@ -211,10 +212,11 @@ This application is licensed under the two-clause BSD license.
 Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/).
 ## Weather Overlay Details
 
-The application fetches current conditions from the public NOAA National Weather Service JSON API:
-`https://api.weather.gov/stations/<STATION>/observations/latest`. Only the temperature is displayed (°F or °C
-depending on the response). The default station is `KNYC`, and it can be overridden with the
-`--weather-station` CLI flag.
+The application fetches current conditions from the public NOAA National Weather Service API:
+`https://api.weather.gov/stations/<STATION>/observations/latest`. The application requests data in 
+NOAA's XML format (`application/vnd.noaa.obs+xml`) and uses libxml2 with XPath for robust parsing.
+Only the temperature is displayed in Fahrenheit. The default station is `KNYC`, and it can be 
+overridden with the `--weather-station` CLI flag.
 
 The overlay appears in the lower-left of the content area, scaled up for readability, and is
 clamped to fit within the visible area. It can be toggled on/off via the on-screen "Weather"
