@@ -3,9 +3,6 @@
 
 #include "common.h"
 
-// Default window size constants
-#define DEFAULT_WINDOW_WIDTH  640
-#define DEFAULT_WINDOW_HEIGHT 480
 
 // UI state variables (to be accessed by other modules)
 extern Eina_Bool is_fullscreen;

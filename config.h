@@ -11,6 +11,7 @@ typedef struct {
     Eina_Bool shuffle;
     Eina_Bool clock_visible;
     Eina_Bool clock_24h; // false = 12-hour (default), true = 24-hour
+    const char *weather_location; // optional: city or station code for wttr.in
 } App_Config;
 
 // Initialize defaults from compile-time constants and current module defaults

@@ -205,13 +205,13 @@ on_quotes_toggle_click(void *data EINA_UNUSED, Evas_Object *obj, void *event_inf
       // Start fetching and periodic refresh, show label
       net_fetch_start();
       net_refresh_start(60.0);
-      elm_object_text_set(obj, "Quotes: ON");
+      elm_object_text_set(obj, "Weather: ON");
    }
    else
    {
       // Stop refresh and hide overlay
       net_refresh_stop();
-      elm_object_text_set(obj, "Quotes: OFF");
+      elm_object_text_set(obj, "Weather: OFF");
    }
 }
 
@@ -445,9 +445,9 @@ ui_create_controls(Evas_Object *parent_box, Evas_Object *win)
    elm_box_pack_end(button_box, shuffle_btn);
    evas_object_show(shuffle_btn);
 
-   // Create GitHub Zen Quotes toggle button (default OFF)
+   // Create Weather toggle button (default OFF)
    Evas_Object *quotes_btn = elm_button_add(win);
-   elm_object_text_set(quotes_btn, "Quotes: OFF");
+   elm_object_text_set(quotes_btn, "Weather: OFF");
    evas_object_smart_callback_add(quotes_btn, "clicked", on_quotes_toggle_click, quotes_btn);
    evas_object_size_hint_weight_set(quotes_btn, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
    evas_object_size_hint_align_set(quotes_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);

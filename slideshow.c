@@ -13,6 +13,11 @@ char *next_media_path = NULL;
 double fade_start_time = 0.0;
 // Dedicated overlay to guarantee smooth crossfade independent of media load
 static Evas_Object *fade_overlay = NULL;
+// Hold overlay at full opacity until new media is fully ready
+static Eina_Bool waiting_media_ready = EINA_FALSE;
+static double waiting_start_time = 0.0;
+// Forward declaration for image load readiness callback
+static void _on_image_load_ready(void *data, Evas_Object *obj, void *event_info);
 
 // Runtime-configurable timings (initialized to compile-time defaults)
 static double slideshow_interval_runtime = SLIDESHOW_INTERVAL;
@@ -116,7 +121,10 @@ slideshow_set_interval(double seconds)
 void
 slideshow_set_fade_duration(double seconds)
 {
-   if (seconds > 0.0)
+   // Allow setting to 0 or negative to disable fading entirely
+   if (seconds <= 0.0)
+      fade_duration_runtime = 0.0;
+   else
       fade_duration_runtime = seconds;
 }
 
@@ -138,7 +146,7 @@ fade_animator_cb(void *data EINA_UNUSED)
 {
    double current_time = ecore_time_get();
    double elapsed = current_time - fade_start_time;
-   double progress = elapsed / fade_duration_runtime;
+   double progress = (fade_duration_runtime > 0.0) ? (elapsed / fade_duration_runtime) : 1.0;
    if (progress < 0.0) progress = 0.0;
    if (progress > 1.0) progress = 1.0;
    // Smoothstep easing for extra smooth fade
@@ -160,37 +168,65 @@ fade_animator_cb(void *data EINA_UNUSED)
          if (fade_overlay)
             evas_object_color_set(fade_overlay, 0, 0, 0, alpha);
          
-         // Load the new media
-         if (is_image_file(next_media_path))
+         // If we're not already waiting for readiness, perform the swap now
+         if (!waiting_media_ready)
          {
-            // Show image in letterbox
-            if (slideshow_video) evas_object_hide(slideshow_video);
-            if (slideshow_image)
+            // Load the new media
+            if (is_image_file(next_media_path))
             {
-               elm_image_file_set(slideshow_image, next_media_path, NULL);
-               elm_object_content_set(letterbox_bg, slideshow_image);
-               evas_object_show(slideshow_image);
-               INF("Showing image: %s", next_media_path);
+               // Show image in letterbox
+               if (slideshow_video) evas_object_hide(slideshow_video);
+               if (slideshow_image)
+               {
+                  elm_image_file_set(slideshow_image, next_media_path, NULL);
+                  elm_object_content_set(letterbox_bg, slideshow_image);
+                  evas_object_show(slideshow_image);
+                  INF("Showing image: %s", next_media_path);
+
+                  // Hold overlay until the image reports 'load,ready'
+                  waiting_media_ready = EINA_TRUE;
+                  waiting_start_time = current_time;
+                  // Begin preloading on the display image to trigger callback when ready
+                  {
+                     Evas_Object *img_obj = elm_image_object_get(slideshow_image);
+                     if (img_obj)
+                        evas_object_image_preload(img_obj, EINA_TRUE);
+                  }
+                  // Ensure only one callback instance is registered
+                  evas_object_smart_callback_del(slideshow_image, "load,ready", _on_image_load_ready);
+                  evas_object_smart_callback_add(slideshow_image, "load,ready", _on_image_load_ready, NULL);
+               }
+            }
+            else if (is_video_file(next_media_path))
+            {
+               // Show video in letterbox
+               if (slideshow_image) evas_object_hide(slideshow_image);
+               if (slideshow_video)
+               {
+                  elm_video_file_set(slideshow_video, next_media_path);
+                  elm_object_content_set(letterbox_bg, slideshow_video);
+                  elm_video_play(slideshow_video);
+                  evas_object_show(slideshow_video);
+                  INF("Showing video: %s", next_media_path);
+               }
+
+               // For videos, proceed to fade-in immediately
+               free(next_media_path);
+               next_media_path = NULL;
+               waiting_media_ready = EINA_FALSE;
+               fade_start_time = current_time;  // Reset timer for fade in
             }
          }
-         else if (is_video_file(next_media_path))
+
+         // Timeout fallback: if image does not report ready, proceed anyway
+         if (waiting_media_ready && (current_time - waiting_start_time) > (fade_duration_runtime > 0.0 ? (fade_duration_runtime * 2.0) : 1.0))
          {
-            // Show video in letterbox
-            if (slideshow_image) evas_object_hide(slideshow_image);
-            if (slideshow_video)
-            {
-               elm_video_file_set(slideshow_video, next_media_path);
-               elm_object_content_set(letterbox_bg, slideshow_video);
-               elm_video_play(slideshow_video);
-               evas_object_show(slideshow_video);
-               INF("Showing video: %s", next_media_path);
-            }
+            WRN("Image load timeout; proceeding with fade-in");
+            free(next_media_path);
+            next_media_path = NULL;
+            waiting_media_ready = EINA_FALSE;
+            fade_start_time = current_time;
          }
-         
-         // Clean up and start fade in phase
-         free(next_media_path);
-         next_media_path = NULL;
-         fade_start_time = current_time;  // Reset timer for fade in
       }
       else
       {
@@ -248,6 +284,45 @@ start_fade_transition(const char *media_path)
 {
    if (is_fading) return;  // Already fading
 
+   // If fading is disabled, switch immediately without animator
+   if (fade_duration_runtime <= 0.0)
+   {
+      if (!media_path) return;
+      if (is_image_file(media_path))
+      {
+         if (slideshow_video) evas_object_hide(slideshow_video);
+         if (slideshow_image)
+         {
+            elm_image_file_set(slideshow_image, media_path, NULL);
+            elm_object_content_set(letterbox_bg, slideshow_image);
+            evas_object_show(slideshow_image);
+            INF("Showing image (no fade): %s", media_path);
+         }
+      }
+      else if (is_video_file(media_path))
+      {
+         if (slideshow_image) evas_object_hide(slideshow_image);
+         if (slideshow_video)
+         {
+            elm_video_file_set(slideshow_video, media_path);
+            elm_object_content_set(letterbox_bg, slideshow_video);
+            elm_video_play(slideshow_video);
+            evas_object_show(slideshow_video);
+            INF("Showing video (no fade): %s", media_path);
+         }
+      }
+
+      // Ensure overlay is hidden
+      _ensure_fade_overlay();
+      _update_fade_overlay_geometry();
+      if (fade_overlay)
+      {
+         evas_object_color_set(fade_overlay, 0, 0, 0, 0);
+         evas_object_hide(fade_overlay);
+      }
+      return;
+   }
+
    is_fading = EINA_TRUE;
    next_media_path = strdup(media_path);
    fade_start_time = ecore_time_get();
@@ -270,6 +345,25 @@ start_fade_transition(const char *media_path)
    fade_animator = ecore_animator_add(fade_animator_cb, NULL);
    // Kick off preload when fade starts to reduce stutter
    preload_next_image();
+}
+
+// Image load-ready callback: begin fade-in once display image is ready
+static void
+_on_image_load_ready(void *data EINA_UNUSED, Evas_Object *obj, void *event_info EINA_UNUSED)
+{
+   // Detach callback to avoid repeated triggers
+   evas_object_smart_callback_del(obj, "load,ready", _on_image_load_ready);
+   if (!is_fading) return;
+   if (!waiting_media_ready) return;
+
+   // Proceed to fade-in phase now that image is ready
+   if (next_media_path)
+   {
+      free(next_media_path);
+      next_media_path = NULL;
+   }
+   waiting_media_ready = EINA_FALSE;
+   fade_start_time = ecore_time_get();
 }
 
 // Function to show the next media in the slideshow

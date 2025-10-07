@@ -13,6 +13,9 @@
 #define SLIDESHOW_INTERVAL 10.0  // 10 seconds between images
 #define IMAGES_DIR "./images/"
 #define FADE_DURATION 0.5  // 0.5 seconds fade duration
+// Default window size
+#define DEFAULT_WINDOW_WIDTH 640
+#define DEFAULT_WINDOW_HEIGHT 480
 
 // Media file structure to store paths
 typedef struct _MediaFile {

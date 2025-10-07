@@ -187,12 +187,20 @@ Note: These options are applied at runtime. Slideshow interval and fade duration
 
 ### Network Overlay
 
-The application can fetch and display a short message from the internet:
-- Endpoint: `https://api.github.com/zen`
+The application can fetch and display a short weather summary from the internet:
+- Endpoint: `https://wttr.in/?format=3`
 - Display: Small white text label in the top-left overlay
-- Behavior: Starts a fetch after the window is shown; you can enable periodic refresh (default 60 seconds) via the Quotes control
+- Behavior: Starts a fetch after the window is shown; you can enable periodic refresh (default 60 seconds) via the Weather control
 
 Dependencies: Ensure `ecore-con` is available via `pkg-config`.
+
+### Command-Line Options for Weather
+
+Specify a weather location to override auto-detection:
+
+- `-l`, `--location <name>` — City or station code, e.g. `--location "San Francisco"`, `--location KJFK`.
+
+When provided, the Weather overlay fetches from `wttr.in/<location>?format=3`.
 
 ### Configuration Persistence
 
@@ -215,4 +223,4 @@ export EINA_LOG_LEVEL=4
 
 This application is licensed under the two-clause BSD license.
 
-Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/). 
+Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/).

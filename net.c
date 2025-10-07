@@ -9,6 +9,7 @@ static Eina_Strbuf *net_buf = NULL;
 static Ecore_Event_Handler *hdl_data = NULL;
 static Ecore_Event_Handler *hdl_complete = NULL;
 static Ecore_Timer *net_timer = NULL;
+static char *net_station = NULL; // optional station/city for wttr.in
 
 static void
 _net_position_label(void)
@@ -153,12 +154,30 @@ net_fetch_start(void)
       inited = EINA_TRUE;
    }
 
-   // Public endpoint returning a short plain-text message
-   const char *url = "https://api.github.com/zen";
+   // Build wttr.in endpoint; use configured station if provided
+   char url_buf[256];
+   if (net_station && *net_station)
+   {
+      // Basic encoding: replace spaces with '+' for path segment
+      Eina_Strbuf *tmp = eina_strbuf_new();
+      for (const char *p = net_station; p && *p; ++p)
+      {
+         if (*p == ' ')
+            eina_strbuf_append_char(tmp, '+');
+         else
+            eina_strbuf_append_char(tmp, *p);
+      }
+      snprintf(url_buf, sizeof(url_buf), "https://wttr.in/%s?format=1", eina_strbuf_string_get(tmp));
+      eina_strbuf_free(tmp);
+   }
+   else
+   {
+      snprintf(url_buf, sizeof(url_buf), "https://wttr.in/?format=1");
+   }
 
-   INF("Creating new HTTP request to https://api.github.com/zen");
-   // Create URL object and set a User-Agent required by GitHub
-   net_url = ecore_con_url_new(url);
+   INF("Creating new HTTP request to %s", url_buf);
+   // Create URL object and set a User-Agent
+   net_url = ecore_con_url_new(url_buf);
    if (!net_url)
    {
       ERR("Failed to create URL object");
@@ -187,11 +206,13 @@ net_fetch_start(void)
 static Eina_Bool
 _net_timer_cb(void *data EINA_UNUSED)
 {
-   static int timer_count = 0;
-   timer_count++;
-   INF("Timer callback triggered #%d - attempting to refresh network message", timer_count);
-   net_fetch_start();
-   return ECORE_CALLBACK_RENEW;
+    static int timer_count = 0;
+    timer_count++;
+    INF("Timer callback triggered #%d - attempting to refresh network message", timer_count);
+    // Print to stdout so users can verify periodic updates
+    printf("Auto refresh: starting weather request #%d\n", timer_count);
+    net_fetch_start();
+    return ECORE_CALLBACK_RENEW;
 }
 
 void
@@ -261,4 +282,26 @@ net_cleanup(void)
    }
    ecore_con_url_shutdown();
    net_label = NULL;
+   if (net_station) { free(net_station); net_station = NULL; }
+}
+
+void
+net_set_station(const char *station_id)
+{
+   if (net_station)
+   {
+      free(net_station);
+      net_station = NULL;
+   }
+   if (station_id && *station_id)
+   {
+      net_station = strdup(station_id);
+      INF("Weather station/location set to '%s'", net_station);
+   }
+}
+
+const char*
+net_get_station(void)
+{
+   return net_station;
 }

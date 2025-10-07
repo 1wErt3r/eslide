@@ -16,6 +16,7 @@ config_defaults(void)
     cfg.shuffle = EINA_FALSE;       // matches slideshow default
     cfg.clock_visible = EINA_FALSE; // matches clock default
     cfg.clock_24h = EINA_FALSE;     // default to 12-hour time
+    cfg.weather_location = NULL;    // default: auto-detected location by wttr.in
     return cfg;
 }
 
@@ -38,6 +39,7 @@ static const Ecore_Getopt _opts = {
         ECORE_GETOPT_STORE_FALSE (0,   "no-clock", "Hide clock overlay."),
         ECORE_GETOPT_STORE_TRUE  (0,   "clock-24h", "Use 24-hour time format (default is 12-hour)."),
         ECORE_GETOPT_STORE_FALSE (0,   "clock-12h", "Use 12-hour time format."),
+        ECORE_GETOPT_STORE_STR   ('l', "location", "Weather location (city name or station code)."),
         ECORE_GETOPT_VERSION     ('V', "version"),
         ECORE_GETOPT_HELP        ('h', "help"),
         ECORE_GETOPT_SENTINEL
@@ -65,6 +67,7 @@ _config_edd_setup(void)
     EET_DATA_DESCRIPTOR_ADD_BASIC(_cfg_edd, App_Config, "shuffle", shuffle, EET_T_INT);
     EET_DATA_DESCRIPTOR_ADD_BASIC(_cfg_edd, App_Config, "clock_visible", clock_visible, EET_T_INT);
     EET_DATA_DESCRIPTOR_ADD_BASIC(_cfg_edd, App_Config, "clock_24h", clock_24h, EET_T_INT);
+    EET_DATA_DESCRIPTOR_ADD_BASIC(_cfg_edd, App_Config, "weather_location", weather_location, EET_T_STRING);
 }
 
 void
@@ -140,6 +143,7 @@ config_merge_cli(App_Config *cfg, int argc, char **argv)
     Eina_Bool shuffle = cfg->shuffle;
     Eina_Bool clock = cfg->clock_visible;
     Eina_Bool clock_24h = cfg->clock_24h;
+    char *weather_location = (char *)cfg->weather_location;
 
     Ecore_Getopt_Value values[] = {
         ECORE_GETOPT_VALUE_DOUBLE(interval),
@@ -153,6 +157,7 @@ config_merge_cli(App_Config *cfg, int argc, char **argv)
         ECORE_GETOPT_VALUE_BOOL(clock),
         ECORE_GETOPT_VALUE_BOOL(clock_24h),
         ECORE_GETOPT_VALUE_BOOL(clock_24h),
+        ECORE_GETOPT_VALUE_STR(weather_location),
         ECORE_GETOPT_VALUE_NONE, // version handled by Ecore_Getopt
         ECORE_GETOPT_VALUE_NONE, // help handled by Ecore_Getopt
         ECORE_GETOPT_VALUE_NONE
@@ -173,6 +178,7 @@ config_merge_cli(App_Config *cfg, int argc, char **argv)
     cfg->shuffle = shuffle;
     cfg->clock_visible = clock;
     cfg->clock_24h = clock_24h;
+    if (weather_location) cfg->weather_location = weather_location;
 }
 
 // Retain original API for callers expecting a full parse from defaults
@@ -196,4 +202,6 @@ config_log(const App_Config *cfg)
         cfg->shuffle ? "true" : "false",
         cfg->clock_visible ? "true" : "false",
         cfg->clock_24h ? "24h" : "12h");
+    if (cfg->weather_location)
+        INF("Weather location: %s", cfg->weather_location);
 }
