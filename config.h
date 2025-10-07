@@ -10,7 +10,8 @@ typedef struct {
     Eina_Bool fullscreen;
     Eina_Bool shuffle;
     Eina_Bool clock_visible;
-    Eina_Bool clock_24h;          // false = 12-hour (default), true = 24-hour
+    Eina_Bool clock_24h;       // false = 12-hour (default), true = 24-hour
+    Eina_Bool weather_visible; // weather overlay visibility
 } App_Config;
 
 // Initialize defaults from compile-time constants and current module defaults

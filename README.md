@@ -6,13 +6,14 @@ It is intended to be used as digital picture frame software, but can also be use
 
 ## Key Features
 
-- **Automatic Slideshow**: Cycles through media files every 10 seconds
+- **Automatic Slideshow**: Cycles through media files every 30 seconds
 - **Media Support**: Handles both images and videos
 - **Smooth Transitions**: 0.5-second fade transitions between media items
 - **Interactive Controls**: On-screen controls for navigation and settings
 - **Shuffle Mode**: Randomize playback order
 - **Fullscreen Display**: Full-screen presentation mode
 - **Digital Clock**: Optional clock overlay with automatic positioning
+- **Weather Overlay**: Optional compact weather display updated every 60 seconds
 - **Web Message Overlay**: Fetches a short message from the internet at startup
 - **Media Detection**: Automatically scans `./images/` directory for supported media files
 
@@ -123,6 +124,7 @@ Place your image and video files in the `./images/` directory:
 - **Next**: Skip to next media item
 - **Shuffle**: Toggle random playback order
 - **Clock**: Toggle digital clock display
+- **Weather**: Toggle compact weather overlay (updates every 60 seconds)
 - **Progress**: Toggle compact "index/total" overlay
 
 - **Fullscreen**: Toggle fullscreen mode
@@ -150,6 +152,7 @@ You can override defaults at startup using flags:
 - `--shuffle` / `--no-shuffle` — enable or disable shuffle mode
 - `--clock` / `--no-clock` — show or hide the clock overlay
 - `--clock-24h` / `--clock-12h` — select 24-hour or 12-hour time format
+- `--weather` / `--no-weather` — show or hide the weather overlay
 - `--version` or `-V` — print version information
 - `--help` or `-h` — show help
 
@@ -158,6 +161,7 @@ Examples:
 ```bash
 ./eslide --interval 8 --fade 0.75
 ./eslide --images-dir ./pictures --shuffle --clock
+./eslide --weather
 ./eslide --no-fullscreen --no-shuffle
 ```
 
@@ -187,6 +191,7 @@ Settings are persisted using Eet in a file next to the executable:
 - Path: `./eslide.cfg`
 - Startup: Load persisted settings, then merge CLI overrides
 - Shutdown: Save last-used settings (interval, fade, images dir, fullscreen, shuffle, clock visibility, 12/24h)
+  and weather visibility
 
 This allows the app to remember your preferences between runs.
 
@@ -203,3 +208,9 @@ export EINA_LOG_LEVEL=4
 This application is licensed under the two-clause BSD license.
 
 Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/).
+## Weather Overlay Details
+
+The application fetches a single-line weather summary from `https://wttr.in/?format=1` and updates
+the overlay every 60 seconds. The overlay appears in the lower-left of the content area, scaled up
+for readability, and is clamped to fit within the visible area. It can be toggled on/off via the
+on-screen "Weather" button or the `--weather` / `--no-weather` CLI flags.

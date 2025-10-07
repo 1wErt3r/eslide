@@ -2,6 +2,7 @@
 #include "slideshow.h"
 #include "clock.h"
 #include "media.h"
+#include "weather.h"
 #include <strings.h>
 #include <Ecore.h>
 #include <Evas.h>
@@ -192,6 +193,14 @@ void on_clock_toggle_click(void* data EINA_UNUSED, Evas_Object* obj, void* event
         elm_object_text_set(obj, "Clock: OFF");
 }
 
+void on_weather_toggle_click(void* data EINA_UNUSED, Evas_Object* obj, void* event_info EINA_UNUSED)
+{
+    weather_toggle();
+    if (weather_visible)
+        elm_object_text_set(obj, "Weather: ON");
+    else
+        elm_object_text_set(obj, "Weather: OFF");
+}
 
 
 // Progress overlay toggle button handler
@@ -336,8 +345,10 @@ void ui_setup_media_display(Evas_Object* parent_box)
     evas_object_smart_callback_add(slideshow_video, "clicked", on_media_click, NULL);
     evas_object_hide(slideshow_video); // Initially hidden
 
-    // Set up resize callback for letterbox to reposition clock
+    // Set up resize callback for letterbox to reposition clock and weather
     evas_object_event_callback_add(letterbox_bg, EVAS_CALLBACK_RESIZE, on_letterbox_resize, NULL);
+    evas_object_event_callback_add(
+        letterbox_bg, EVAS_CALLBACK_RESIZE, on_letterbox_resize_weather, NULL);
     // Set up resize callback to keep progress overlay anchored
     evas_object_event_callback_add(letterbox_bg, EVAS_CALLBACK_RESIZE, _progress_on_resize, NULL);
 
@@ -406,7 +417,6 @@ void ui_create_controls(Evas_Object* parent_box, Evas_Object* win)
     evas_object_show(shuffle_btn);
 
 
-
     // Create Clock Toggle button
     Evas_Object* clock_btn = elm_button_add(win);
     if (clock_visible)
@@ -418,6 +428,18 @@ void ui_create_controls(Evas_Object* parent_box, Evas_Object* win)
     evas_object_size_hint_align_set(clock_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
     elm_box_pack_end(button_box, clock_btn);
     evas_object_show(clock_btn);
+
+    // Create Weather Toggle button
+    Evas_Object* weather_btn = elm_button_add(win);
+    if (weather_visible)
+        elm_object_text_set(weather_btn, "Weather: ON");
+    else
+        elm_object_text_set(weather_btn, "Weather: OFF");
+    evas_object_smart_callback_add(weather_btn, "clicked", on_weather_toggle_click, weather_btn);
+    evas_object_size_hint_weight_set(weather_btn, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+    evas_object_size_hint_align_set(weather_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
+    elm_box_pack_end(button_box, weather_btn);
+    evas_object_show(weather_btn);
 
     // Create Progress overlay toggle button
     Evas_Object* progress_btn = elm_button_add(win);

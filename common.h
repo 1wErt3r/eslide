@@ -10,7 +10,7 @@
 #include <Ecore.h>
 
 // Application configuration constants
-#define SLIDESHOW_INTERVAL 10.0 // 10 seconds between images
+#define SLIDESHOW_INTERVAL 30.0 // 30 seconds between images
 #define IMAGES_DIR "./images/"
 #define FADE_DURATION 0.5 // 0.5 seconds fade duration
 // Default window size

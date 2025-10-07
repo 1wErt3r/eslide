@@ -3,6 +3,7 @@
 #include "media.h"
 #include "slideshow.h"
 #include "clock.h"
+#include "weather.h"
 #include "config.h"
 
 
@@ -35,6 +36,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     is_shuffle_mode = cfg.shuffle;
     // Set clock format (12/24-hour) from CLI
     clock_set_24h(cfg.clock_24h);
+    // Ensure weather toggle reflects --weather/--no-weather at startup
+    weather_visible = cfg.weather_visible;
 
     // Create main window and get the background
     win = ui_create_main_window(&win_bg);
@@ -59,6 +62,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
 
     // Initialize clock (using letterbox_bg as parent)
     clock_init(letterbox_bg);
+    // Initialize weather overlay (using letterbox_bg as parent)
+    weather_init(letterbox_bg);
 
     // Set configurable images directory before scanning
     media_set_images_dir(cfg.images_dir);
@@ -79,6 +84,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     // Start slideshow and clock
     slideshow_start();
     clock_start();
+    // Start weather polling
+    weather_start();
 
     // Set fullscreen from config and show window
     elm_win_fullscreen_set(win, cfg.fullscreen);
@@ -88,6 +95,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
 
     // Trigger initial clock positioning
     on_letterbox_resize(NULL, NULL, letterbox_bg, NULL);
+    // Trigger initial weather positioning
+    on_letterbox_resize_weather(NULL, NULL, letterbox_bg, NULL);
 
     // Run main loop
     INF("Starting main loop");
@@ -101,11 +110,13 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     cfg.shuffle = is_shuffle_mode;
     cfg.clock_visible = clock_visible;
     cfg.clock_24h = clock_is_24h;
+    cfg.weather_visible = weather_visible;
     config_save_to_eet(&cfg, cfg_path);
 
     // Cleanup
     slideshow_cleanup();
     clock_cleanup();
+    weather_cleanup();
     media_cleanup();
     ui_cleanup();
     config_eet_shutdown();
