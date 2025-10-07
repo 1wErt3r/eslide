@@ -86,7 +86,7 @@ static void on_letterbox_mouse_down(void *data EINA_UNUSED, Evas *e EINA_UNUSED,
       elm_win_fullscreen_set(win, is_fullscreen);
       if (!is_fullscreen)
       {
-         evas_object_resize(win, 640, 480);
+         evas_object_resize(win, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
       }
       INF("Double-click: Toggle fullscreen");
    }
@@ -135,10 +135,10 @@ on_fullscreen_click(void *data, Evas_Object *obj EINA_UNUSED, void *event_info E
    }
    else
    {
-      // Set window size to 640x480 when switching to windowed mode
-      evas_object_resize(win, 640, 480);
-      INF("Switched to windowed mode (640x480)");
-      printf("Switched to windowed mode (640x480)\n");
+      // Set window size when switching to windowed mode
+      evas_object_resize(win, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+      INF("Switched to windowed mode (%dx%d)", DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
+      printf("Switched to windowed mode (%dx%d)\n", DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
    }
 }
 
@@ -313,6 +313,9 @@ ui_create_main_window(Evas_Object **win_bg_out)
    evas_object_smart_callback_add(win, "delete,request", on_done, NULL);
    // Add keyboard shortcuts handler
    evas_object_event_callback_add(win, EVAS_CALLBACK_KEY_DOWN, on_key_down, win);
+   
+   // Set a reasonable default window size
+   evas_object_resize(win, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
    
    // Set window background to black to match letterboxing
    Evas_Object *win_bg = elm_bg_add(win);
