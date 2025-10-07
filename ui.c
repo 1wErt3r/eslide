@@ -12,7 +12,7 @@ Eina_Bool is_fullscreen = EINA_TRUE;
 Eina_Bool controls_visible = EINA_FALSE;
 Evas_Object* button_box = NULL;
 static Ecore_Timer* controls_hide_timer = NULL;
-static double controls_inactivity_seconds = 3.0; // auto-hide after 3s
+static double controls_inactivity_seconds = 20.0; // auto-hide after 20s
 
 // Progress overlay state
 static Evas_Object* progress_label = NULL;
@@ -121,12 +121,14 @@ void on_done(void* data EINA_UNUSED, Evas_Object* obj EINA_UNUSED, void* event_i
 void on_button_click(
     void* data EINA_UNUSED, Evas_Object* obj EINA_UNUSED, void* event_info EINA_UNUSED)
 {
+    controls_reset_inactivity_timer();
     INF("Slideshow toggle button clicked!");
     toggle_slideshow();
 }
 
 void on_fullscreen_click(void* data, Evas_Object* obj EINA_UNUSED, void* event_info EINA_UNUSED)
 {
+    controls_reset_inactivity_timer();
     Evas_Object* win = (Evas_Object*) data;
 
     is_fullscreen = !is_fullscreen;
@@ -146,6 +148,7 @@ void on_fullscreen_click(void* data, Evas_Object* obj EINA_UNUSED, void* event_i
 void on_next_image_click(
     void* data EINA_UNUSED, Evas_Object* obj EINA_UNUSED, void* event_info EINA_UNUSED)
 {
+    controls_reset_inactivity_timer();
     show_next_media();
     INF("Manual next media");
     printf("Next media\n");
@@ -154,6 +157,7 @@ void on_next_image_click(
 void on_prev_image_click(
     void* data EINA_UNUSED, Evas_Object* obj EINA_UNUSED, void* event_info EINA_UNUSED)
 {
+    controls_reset_inactivity_timer();
     show_prev_media();
     INF("Manual previous media");
     printf("Previous media\n");
@@ -162,6 +166,7 @@ void on_prev_image_click(
 void on_shuffle_click(
     void* data EINA_UNUSED, Evas_Object* obj EINA_UNUSED, void* event_info EINA_UNUSED)
 {
+    controls_reset_inactivity_timer();
     toggle_shuffle_mode();
 
     // Update button text to reflect current mode
@@ -184,6 +189,7 @@ void on_media_click(
 
 void on_clock_toggle_click(void* data EINA_UNUSED, Evas_Object* obj, void* event_info EINA_UNUSED)
 {
+    controls_reset_inactivity_timer();
     toggle_clock();
 
     // Update button text
@@ -195,6 +201,7 @@ void on_clock_toggle_click(void* data EINA_UNUSED, Evas_Object* obj, void* event
 
 void on_weather_toggle_click(void* data EINA_UNUSED, Evas_Object* obj, void* event_info EINA_UNUSED)
 {
+    controls_reset_inactivity_timer();
     weather_toggle();
     if (weather_visible)
         elm_object_text_set(obj, "Weather: ON");
@@ -207,6 +214,7 @@ void on_weather_toggle_click(void* data EINA_UNUSED, Evas_Object* obj, void* eve
 static void on_progress_toggle_click(
     void* data EINA_UNUSED, Evas_Object* obj, void* event_info EINA_UNUSED)
 {
+    controls_reset_inactivity_timer();
     progress_visible = !progress_visible;
     ui_progress_set_visible(progress_visible);
     elm_object_text_set(obj, progress_visible ? "Progress: ON" : "Progress: OFF");
