@@ -8,12 +8,12 @@
 // Function declarations for media file handling
 
 // File type detection functions
-Eina_Bool is_image_file(const char *filename);
-Eina_Bool is_video_file(const char *filename);
-Eina_Bool is_media_file(const char *filename);
+Eina_Bool is_image_file(const char* filename);
+Eina_Bool is_video_file(const char* filename);
+Eina_Bool is_media_file(const char* filename);
 
 // Media file management functions
-void free_media_file(MediaFile *media_file);
+void free_media_file(MediaFile* media_file);
 void scan_media_files(void);
 int get_media_file_count(void);
 char* get_media_path_at_index(int index);
@@ -22,10 +22,10 @@ char* get_media_path_at_index(int index);
 void media_cleanup(void);
 
 // Runtime configuration setter
-void media_set_images_dir(const char *path);
+void media_set_images_dir(const char* path);
 
 // Global media file list (to be accessed by other modules)
-extern Eina_List *media_files;
+extern Eina_List* media_files;
 extern int current_media_index;
 
 #endif /* MEDIA_H */

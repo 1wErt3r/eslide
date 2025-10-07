@@ -4,10 +4,10 @@
 #include "common.h"
 
 // Networking overlay state
-extern Evas_Object *net_label;
+extern Evas_Object* net_label;
 
 // Initialize network label overlay and positioning
-void net_init(Evas_Object *parent_window);
+void net_init(Evas_Object* parent_window);
 
 // Start asynchronous HTTP request to fetch a short message
 void net_fetch_start(void);

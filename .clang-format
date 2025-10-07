@@ -1,0 +1,52 @@
+---
+# Custom clang-format configuration for efl-hello project
+# Designed to minimize changes to existing code style
+
+BasedOnStyle: WebKit
+
+# Indentation
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+# Braces - preserve K&R style
+BreakBeforeBraces: Linux
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortBlocksOnASingleLine: false
+
+# Pointers and references - keep space before *
+PointerAlignment: Left
+DerivePointerAlignment: false
+
+# Spacing - preserve existing patterns
+SpaceAfterCStyleCast: true
+SpaceBeforeParens: ControlStatements
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+SpaceInEmptyParentheses: false
+
+# Line breaks
+MaxEmptyLinesToKeep: 2
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+# Include sorting - don't change order
+SortIncludes: false
+IncludeBlocks: Preserve
+
+# Comments
+ReflowComments: false
+
+# Function parameters
+AllowAllParametersOfDeclarationOnNextLine: true
+BinPackParameters: true
+BinPackArguments: true
+
+# Column limit
+ColumnLimit: 100
+
+# Other formatting
+AlignTrailingComments: true
+SpaceBeforeAssignmentOperators: true
+ContinuationIndentWidth: 4
