@@ -10,22 +10,34 @@
 EAPI_MAIN int elm_main(int argc, char** argv)
 {
     Evas_Object *win, *win_bg, *box;
-    App_Config cfg;
     const char* cfg_path = "./eslide.cfg";
+
+    // Check for help/version arguments early - exit before any UI initialization
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0 ||
+            strcmp(argv[i], "--version") == 0 || strcmp(argv[i], "-V") == 0) {
+            // Let config_merge_cli handle the help/version display and exit
+            App_Config temp_cfg = config_defaults();
+            config_merge_cli(&temp_cfg, argc, argv);
+            return 0; // This won't be reached due to exit() in ecore_getopt_parse
+        }
+    }
 
     // Initialize logging
     common_init_logging();
 
+    // Parse command line arguments first - this will exit for --help/--version
+    App_Config cfg = config_defaults();
+    
     // Initialize Eet and load persisted config (same folder as executable)
     config_eet_init();
-    cfg = config_defaults();
     App_Config loaded;
     if (config_load_from_eet(&loaded, cfg_path)) {
         cfg = loaded;
         INF("Loaded persisted configuration");
     }
-
-    // Merge command-line options over loaded/default config and log
+    
+    // Apply command line arguments over loaded/default config
     config_merge_cli(&cfg, argc, argv);
     config_log(&cfg);
 

@@ -22,7 +22,7 @@ App_Config config_defaults(void)
 
 static const Ecore_Getopt _opts = { .prog = "eslide",
     .usage = "Usage: eslide [options]",
-    .version = NULL,
+    .version = "1.0.0",
     .copyright = NULL,
     .license = NULL,
     .strict = EINA_TRUE,
