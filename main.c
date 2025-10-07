@@ -14,8 +14,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
 
     // Check for help/version arguments early - exit before any UI initialization
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0 ||
-            strcmp(argv[i], "--version") == 0 || strcmp(argv[i], "-V") == 0) {
+        if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0
+            || strcmp(argv[i], "--version") == 0 || strcmp(argv[i], "-V") == 0) {
             // Let config_merge_cli handle the help/version display and exit
             App_Config temp_cfg = config_defaults();
             config_merge_cli(&temp_cfg, argc, argv);
@@ -28,7 +28,7 @@ EAPI_MAIN int elm_main(int argc, char** argv)
 
     // Parse command line arguments first - this will exit for --help/--version
     App_Config cfg = config_defaults();
-    
+
     // Initialize Eet and load persisted config (same folder as executable)
     config_eet_init();
     App_Config loaded;
@@ -36,7 +36,7 @@ EAPI_MAIN int elm_main(int argc, char** argv)
         cfg = loaded;
         INF("Loaded persisted configuration");
     }
-    
+
     // Apply command line arguments over loaded/default config
     config_merge_cli(&cfg, argc, argv);
     config_log(&cfg);

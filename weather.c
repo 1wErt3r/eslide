@@ -11,7 +11,7 @@ static Ecore_Con_Url* weather_url = NULL;
 static Eina_Bool _weather_used_https = EINA_FALSE;
 static Eina_Bool _weather_inflight = EINA_FALSE;
 Eina_Bool weather_visible = EINA_TRUE; // hidden by default
-static char _station[16] = "KNYC"; // default NOAA station
+static char _station[16] = "KNYC";     // default NOAA station
 
 // Response buffer for incoming data
 typedef struct {
@@ -77,7 +77,8 @@ static Eina_Bool _on_url_complete(void* data, int type, void* event)
         if (_weather_used_https) {
             INF("Weather: trying HTTP fallback");
             char url[160];
-            snprintf(url, sizeof(url), "http://api.weather.gov/stations/%s/observations/latest", _station);
+            snprintf(url, sizeof(url), "http://api.weather.gov/stations/%s/observations/latest",
+                _station);
             ecore_con_url_url_set(weather_url, url);
             _weather_used_https = EINA_FALSE;
             // Immediately trigger a new fetch with the updated URL
@@ -122,11 +123,10 @@ static void _weather_process_response(const char* buf, size_t len)
 {
     if (!buf || len == 0)
         return;
-    
+
     DBG("Weather: processing JSON response");
     _weather_parse_json_and_update(buf, len);
 }
-
 
 
 // Extract properties.temperature.value (degC) from api.weather.gov JSON without external deps
@@ -181,7 +181,8 @@ static Eina_Bool _weather_fetch_cb(void* data EINA_UNUSED)
     // Create the URL object on the first call
     if (!weather_url) {
         char url[160];
-        snprintf(url, sizeof(url), "https://api.weather.gov/stations/%s/observations/latest", _station);
+        snprintf(
+            url, sizeof(url), "https://api.weather.gov/stations/%s/observations/latest", _station);
         weather_url = ecore_con_url_new(url);
         _weather_used_https = EINA_TRUE;
         if (!weather_url) {
@@ -351,7 +352,8 @@ void weather_set_station(const char* station_code)
         // Update URL to use new station for subsequent fetches
         char url[160];
         const char* scheme = _weather_used_https ? "https" : "http";
-        snprintf(url, sizeof(url), "%s://api.weather.gov/stations/%s/observations/latest", scheme, _station);
+        snprintf(url, sizeof(url), "%s://api.weather.gov/stations/%s/observations/latest", scheme,
+            _station);
         ecore_con_url_url_set(weather_url, url);
     }
 }
