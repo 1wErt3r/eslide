@@ -51,6 +51,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     clock_set_24h(cfg.clock_24h);
     // Ensure weather toggle reflects --weather/--no-weather at startup
     weather_visible = cfg.weather_visible;
+    // Ensure news toggle reflects --news/--no-news at startup
+    news_visible = cfg.news_visible;
 
     // Create main window and get the background
     win = ui_create_main_window(&win_bg);
@@ -132,6 +134,7 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     cfg.clock_visible = clock_visible;
     cfg.clock_24h = clock_is_24h;
     cfg.weather_visible = weather_visible;
+    cfg.news_visible = news_visible;
     config_save_to_eet(&cfg, cfg_path);
 
     // Cleanup

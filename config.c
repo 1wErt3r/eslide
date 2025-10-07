@@ -17,6 +17,7 @@ App_Config config_defaults(void)
     cfg.clock_24h = EINA_FALSE;       // default to 12-hour time
     cfg.weather_visible = EINA_FALSE; // weather overlay hidden by default
     cfg.weather_station = "KNYC";     // default NOAA station
+    cfg.news_visible = EINA_FALSE;    // news overlay hidden by default
     return cfg;
 }
 
@@ -40,6 +41,8 @@ static const Ecore_Getopt _opts = { .prog = "eslide",
         ECORE_GETOPT_STORE_TRUE(0, "weather", "Show weather overlay."),
         ECORE_GETOPT_STORE_FALSE(0, "no-weather", "Hide weather overlay."),
         ECORE_GETOPT_STORE_STR(0, "weather-station", "NOAA station code (e.g., KNYC)."),
+        ECORE_GETOPT_STORE_TRUE(0, "news", "Show news overlay."),
+        ECORE_GETOPT_STORE_FALSE(0, "no-news", "Hide news overlay."),
 
         ECORE_GETOPT_VERSION('V', "version"), ECORE_GETOPT_HELP('h', "help"),
         ECORE_GETOPT_SENTINEL } };
@@ -72,6 +75,7 @@ static void _config_edd_setup(void)
         _cfg_edd, App_Config, "weather_visible", weather_visible, EET_T_INT);
     EET_DATA_DESCRIPTOR_ADD_BASIC(
         _cfg_edd, App_Config, "weather_station", weather_station, EET_T_STRING);
+    EET_DATA_DESCRIPTOR_ADD_BASIC(_cfg_edd, App_Config, "news_visible", news_visible, EET_T_INT);
 }
 
 void config_eet_init(void)
@@ -150,6 +154,7 @@ void config_merge_cli(App_Config* cfg, int argc, char** argv)
     Eina_Bool clock_24h = cfg->clock_24h;
     Eina_Bool weather = cfg->weather_visible;
     char* weather_station = (char*) cfg->weather_station;
+    Eina_Bool news = cfg->news_visible;
 
     Ecore_Getopt_Value values[]
         = { ECORE_GETOPT_VALUE_DOUBLE(interval), ECORE_GETOPT_VALUE_DOUBLE(fade),
@@ -159,6 +164,7 @@ void config_merge_cli(App_Config* cfg, int argc, char** argv)
               ECORE_GETOPT_VALUE_BOOL(clock), ECORE_GETOPT_VALUE_BOOL(clock_24h),
               ECORE_GETOPT_VALUE_BOOL(clock_24h), ECORE_GETOPT_VALUE_BOOL(weather),
               ECORE_GETOPT_VALUE_BOOL(weather), ECORE_GETOPT_VALUE_STR(weather_station),
+              ECORE_GETOPT_VALUE_BOOL(news), ECORE_GETOPT_VALUE_BOOL(news),
               ECORE_GETOPT_VALUE_NONE, // version handled by Ecore_Getopt
               ECORE_GETOPT_VALUE_NONE, // help handled by Ecore_Getopt
               ECORE_GETOPT_VALUE_NONE };
@@ -183,6 +189,7 @@ void config_merge_cli(App_Config* cfg, int argc, char** argv)
     if (weather_station) {
         cfg->weather_station = weather_station;
     }
+    cfg->news_visible = news;
 }
 
 // Retain original API for callers expecting a full parse from defaults
@@ -199,10 +206,11 @@ void config_log(const App_Config* cfg)
         return;
     }
     INF("Config: interval=%.2f s, fade=%.2f s, images_dir=%s, fullscreen=%s, shuffle=%s, clock=%s, "
-        "clock_format=%s, weather=%s, station=%s",
+        "clock_format=%s, weather=%s, station=%s, news=%s",
         cfg->slideshow_interval, cfg->fade_duration, cfg->images_dir ? cfg->images_dir : "(null)",
         cfg->fullscreen ? "true" : "false", cfg->shuffle ? "true" : "false",
         cfg->clock_visible ? "true" : "false", cfg->clock_24h ? "24h" : "12h",
         cfg->weather_visible ? "true" : "false",
-        cfg->weather_station ? cfg->weather_station : "(null)");
+        cfg->weather_station ? cfg->weather_station : "(null)",
+        cfg->news_visible ? "true" : "false");
 }
