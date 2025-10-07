@@ -4,6 +4,7 @@
 #include "slideshow.h"
 #include "clock.h"
 #include "weather.h"
+#include "news.h"
 #include "config.h"
 
 
@@ -76,6 +77,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     clock_init(letterbox_bg);
     // Initialize weather overlay (using letterbox_bg as parent)
     weather_init(letterbox_bg);
+    // Initialize news overlay (using letterbox_bg as parent)
+    news_init(letterbox_bg);
     // Configure NOAA station from config
     weather_set_station(cfg.weather_station);
 
@@ -100,6 +103,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     clock_start();
     // Start weather polling
     weather_start();
+    // Start news polling and rotation
+    news_start();
 
     // Set fullscreen from config and show window
     elm_win_fullscreen_set(win, cfg.fullscreen);
@@ -111,6 +116,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     on_letterbox_resize(NULL, NULL, letterbox_bg, NULL);
     // Trigger initial weather positioning
     on_letterbox_resize_weather(NULL, NULL, letterbox_bg, NULL);
+    // Trigger initial news positioning
+    on_letterbox_resize_news(NULL, NULL, letterbox_bg, NULL);
 
     // Run main loop
     INF("Starting main loop");
@@ -131,6 +138,7 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     slideshow_cleanup();
     clock_cleanup();
     weather_cleanup();
+    news_cleanup();
     media_cleanup();
     ui_cleanup();
     config_eet_shutdown();

@@ -3,6 +3,7 @@
 #include "clock.h"
 #include "media.h"
 #include "weather.h"
+#include "news.h"
 #include <strings.h>
 #include <Ecore.h>
 #include <Evas.h>
@@ -209,6 +210,13 @@ void on_weather_toggle_click(void* data EINA_UNUSED, Evas_Object* obj, void* eve
         elm_object_text_set(obj, "Weather: OFF");
 }
 
+void on_news_toggle_click(void* data EINA_UNUSED, Evas_Object* obj, void* event_info EINA_UNUSED)
+{
+    controls_reset_inactivity_timer();
+    news_toggle();
+    elm_object_text_set(obj, news_visible ? "News: ON" : "News: OFF");
+}
+
 
 // Progress overlay toggle button handler
 static void on_progress_toggle_click(
@@ -357,6 +365,8 @@ void ui_setup_media_display(Evas_Object* parent_box)
     evas_object_event_callback_add(letterbox_bg, EVAS_CALLBACK_RESIZE, on_letterbox_resize, NULL);
     evas_object_event_callback_add(
         letterbox_bg, EVAS_CALLBACK_RESIZE, on_letterbox_resize_weather, NULL);
+    evas_object_event_callback_add(
+        letterbox_bg, EVAS_CALLBACK_RESIZE, on_letterbox_resize_news, NULL);
     // Set up resize callback to keep progress overlay anchored
     evas_object_event_callback_add(letterbox_bg, EVAS_CALLBACK_RESIZE, _progress_on_resize, NULL);
 
@@ -448,6 +458,15 @@ void ui_create_controls(Evas_Object* parent_box, Evas_Object* win)
     evas_object_size_hint_align_set(weather_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
     elm_box_pack_end(button_box, weather_btn);
     evas_object_show(weather_btn);
+
+    // Create News Toggle button
+    Evas_Object* news_btn = elm_button_add(win);
+    elm_object_text_set(news_btn, news_visible ? "News: ON" : "News: OFF");
+    evas_object_smart_callback_add(news_btn, "clicked", on_news_toggle_click, news_btn);
+    evas_object_size_hint_weight_set(news_btn, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+    evas_object_size_hint_align_set(news_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
+    elm_box_pack_end(button_box, news_btn);
+    evas_object_show(news_btn);
 
     // Create Progress overlay toggle button
     Evas_Object* progress_btn = elm_button_add(win);

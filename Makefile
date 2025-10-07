@@ -4,7 +4,7 @@
 PROGRAM = eslide
 
 # Source files
-SOURCES = main.c common.c media.c slideshow.c clock.c ui.c config.c weather.c
+SOURCES = main.c common.c media.c slideshow.c clock.c ui.c config.c weather.c news.c
 
 # Object files
 OBJECTS = $(SOURCES:.c=.o)
