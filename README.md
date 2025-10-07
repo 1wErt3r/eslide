@@ -153,6 +153,7 @@ You can override defaults at startup using flags:
 - `--clock` / `--no-clock` — show or hide the clock overlay
 - `--clock-24h` / `--clock-12h` — select 24-hour or 12-hour time format
 - `--weather` / `--no-weather` — show or hide the weather overlay
+- `--weather-station CODE` — NOAA station code (default `KNYC`)
 - `--version` or `-V` — print version information
 - `--help` or `-h` — show help
 
@@ -161,7 +162,7 @@ Examples:
 ```bash
 ./eslide --interval 8 --fade 0.75
 ./eslide --images-dir ./pictures --shuffle --clock
-./eslide --weather
+./eslide --weather --weather-station KNYC
 ./eslide --no-fullscreen --no-shuffle
 ```
 
@@ -210,7 +211,11 @@ This application is licensed under the two-clause BSD license.
 Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/).
 ## Weather Overlay Details
 
-The application fetches a single-line weather summary from `https://wttr.in/?format=1` and updates
-the overlay every 60 seconds. The overlay appears in the lower-left of the content area, scaled up
-for readability, and is clamped to fit within the visible area. It can be toggled on/off via the
-on-screen "Weather" button or the `--weather` / `--no-weather` CLI flags.
+The application fetches current conditions from the public NOAA National Weather Service JSON API:
+`https://api.weather.gov/stations/<STATION>/observations/latest`. Only the temperature is displayed (°F or °C
+depending on the response). The default station is `KNYC`, and it can be overridden with the
+`--weather-station` CLI flag.
+
+The overlay appears in the lower-left of the content area, scaled up for readability, and is
+clamped to fit within the visible area. It can be toggled on/off via the on-screen "Weather"
+button or the `--weather` / `--no-weather` CLI flags.

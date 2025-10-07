@@ -25,4 +25,7 @@ void weather_cleanup(void);
 // Reposition weather overlay when letterbox resizes (top-left corner)
 void on_letterbox_resize_weather(void* data, Evas* e, Evas_Object* obj, void* event_info);
 
+// Configure NOAA station code used for weather requests (e.g., "KNYC")
+void weather_set_station(const char* station_code);
+
 #endif /* WEATHER_H */

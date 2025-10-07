@@ -64,6 +64,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     clock_init(letterbox_bg);
     // Initialize weather overlay (using letterbox_bg as parent)
     weather_init(letterbox_bg);
+    // Configure NOAA station from config
+    weather_set_station(cfg.weather_station);
 
     // Set configurable images directory before scanning
     media_set_images_dir(cfg.images_dir);
