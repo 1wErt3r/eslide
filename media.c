@@ -7,10 +7,20 @@ int current_media_index = 0;
 // Runtime-configurable images directory
 static const char* images_dir_runtime = IMAGES_DIR;
 
+// Cache management variables
+static time_t cache_timestamp = 0;
+static char* cache_dir_path = NULL;
+static Eina_Bool cache_valid = EINA_FALSE;
+
 void media_set_images_dir(const char* path)
 {
-    if (path && *path)
+    if (path && *path) {
+        // Invalidate cache if directory changes
+        if (images_dir_runtime != path && (!cache_dir_path || strcmp(cache_dir_path, path) != 0)) {
+            media_cache_invalidate();
+        }
         images_dir_runtime = path;
+    }
 }
 
 // Function to check if a file has an image extension
@@ -48,6 +58,18 @@ void free_media_file(MediaFile* media_file)
     free(media_file);
 }
 
+// Check if directory has been modified since last cache
+static Eina_Bool _directory_has_changed(void)
+{
+    struct stat dir_stat;
+    if (stat(images_dir_runtime, &dir_stat) != 0) {
+        return EINA_TRUE; // Directory doesn't exist or error - force rescan
+    }
+
+    // Check if directory modification time is newer than cache timestamp
+    return (dir_stat.st_mtime > cache_timestamp);
+}
+
 // Function to scan and store media files from the images directory (lazy loading)
 void scan_media_files(void)
 {
@@ -56,6 +78,16 @@ void scan_media_files(void)
     Eina_Strbuf* filepath_buf;
     char* filepath;
     struct stat file_stat;
+
+    // Check if cache is still valid - skip scanning if nothing changed
+    if (cache_valid && !media_cache_is_valid()) {
+        media_cache_invalidate();
+    }
+
+    if (cache_valid) {
+        DBG("Using cached media list (cache valid)");
+        return;
+    }
 
     // Free any existing media file list before scanning
     MediaFile* media_file;
@@ -114,13 +146,26 @@ void scan_media_files(void)
     } else {
         INF("Loaded %d media files", eina_list_count(media_files));
     }
+
+    // Update cache metadata
+    struct stat dir_stat;
+    if (stat(images_dir_runtime, &dir_stat) == 0) {
+        cache_timestamp = dir_stat.st_mtime;
+        cache_valid = EINA_TRUE;
+
+        // Update cached directory path
+        free(cache_dir_path);
+        cache_dir_path = strdup(images_dir_runtime);
+
+        DBG("Media cache updated for directory: %s", images_dir_runtime);
+    }
 }
 
-// Function to get the count of media files (scans directory each time for up-to-date count)
+// Function to get the count of media files (uses cache when possible)
 int get_media_file_count(void)
 {
-    // Scan media files to ensure we have current count
-    scan_media_files();
+    // Use cache refresh mechanism instead of forced rescan
+    media_refresh_if_needed();
     return eina_list_count(media_files);
 }
 
@@ -130,7 +175,7 @@ char* get_media_path_at_index(int index)
     if (index < 0)
         return NULL;
 
-    scan_media_files(); // Refresh the list to ensure it's current
+    media_refresh_if_needed(); // Use cache-aware refresh instead of forced rescan
     unsigned int media_count = eina_list_count(media_files);
     if ((unsigned int) index >= media_count)
         return NULL;
@@ -140,6 +185,35 @@ char* get_media_path_at_index(int index)
         return NULL;
 
     return strdup(media_file->path); // Return a copy to avoid double free
+}
+
+// Cache management functions
+void media_cache_invalidate(void)
+{
+    cache_valid = EINA_FALSE;
+    cache_timestamp = 0;
+    DBG("Media cache invalidated");
+}
+
+Eina_Bool media_cache_is_valid(void)
+{
+    if (!cache_valid) {
+        return EINA_FALSE;
+    }
+
+    // Check if directory still exists and hasn't changed
+    if (_directory_has_changed()) {
+        return EINA_FALSE;
+    }
+
+    return EINA_TRUE;
+}
+
+void media_refresh_if_needed(void)
+{
+    if (!media_cache_is_valid()) {
+        scan_media_files();
+    }
 }
 
 // Media file list cleanup
@@ -152,4 +226,10 @@ void media_cleanup(void)
         free_media_file(media_file);
     }
     media_files = NULL;
+
+    // Clean up cache metadata
+    free(cache_dir_path);
+    cache_dir_path = NULL;
+    cache_timestamp = 0;
+    cache_valid = EINA_FALSE;
 }

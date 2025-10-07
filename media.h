@@ -24,6 +24,11 @@ void media_cleanup(void);
 // Runtime configuration setter
 void media_set_images_dir(const char* path);
 
+// Cache management functions
+void media_cache_invalidate(void);
+Eina_Bool media_cache_is_valid(void);
+void media_refresh_if_needed(void);
+
 // Global media file list (to be accessed by other modules)
 extern Eina_List* media_files;
 extern int current_media_index;

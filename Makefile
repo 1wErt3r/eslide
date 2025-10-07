@@ -115,5 +115,13 @@ help:
 	@echo "  warn-pedantic  - Build with pedantic warnings (adds -Wshadow, -Wredundant-decls, etc.)"
 	@echo "  check-warnings - Test code against all warning levels"
 
+# Test target for cache functionality
+test-cache: test_cache
+	@echo "Running cache test..."
+	./test_cache
+
+test_cache: test_cache.o
+	gcc test_cache.o -o test_cache
+
 # Declare phony targets
-.PHONY: all clean install uninstall run check-deps help warn-basic warn-medium warn-strict warn-pedantic check-warnings
+.PHONY: all clean install uninstall run check-deps help warn-basic warn-medium warn-strict warn-pedantic check-warnings test-cache
