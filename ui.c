@@ -2,7 +2,6 @@
 #include "slideshow.h"
 #include "clock.h"
 #include "media.h"
-#include "net.h"
 #include <strings.h>
 #include <Ecore.h>
 #include <Evas.h>
@@ -193,22 +192,7 @@ void on_clock_toggle_click(void* data EINA_UNUSED, Evas_Object* obj, void* event
         elm_object_text_set(obj, "Clock: OFF");
 }
 
-void on_quotes_toggle_click(void* data EINA_UNUSED, Evas_Object* obj, void* event_info EINA_UNUSED)
-{
-    static Eina_Bool quotes_enabled = EINA_FALSE; // default OFF
-    quotes_enabled = !quotes_enabled;
 
-    if (quotes_enabled) {
-        // Start fetching and periodic refresh, show label
-        net_fetch_start();
-        net_refresh_start(60.0);
-        elm_object_text_set(obj, "Weather: ON");
-    } else {
-        // Stop refresh and hide overlay
-        net_refresh_stop();
-        elm_object_text_set(obj, "Weather: OFF");
-    }
-}
 
 // Progress overlay toggle button handler
 static void on_progress_toggle_click(
@@ -421,14 +405,7 @@ void ui_create_controls(Evas_Object* parent_box, Evas_Object* win)
     elm_box_pack_end(button_box, shuffle_btn);
     evas_object_show(shuffle_btn);
 
-    // Create Weather toggle button (default OFF)
-    Evas_Object* quotes_btn = elm_button_add(win);
-    elm_object_text_set(quotes_btn, "Weather: OFF");
-    evas_object_smart_callback_add(quotes_btn, "clicked", on_quotes_toggle_click, quotes_btn);
-    evas_object_size_hint_weight_set(quotes_btn, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
-    evas_object_size_hint_align_set(quotes_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
-    elm_box_pack_end(button_box, quotes_btn);
-    evas_object_show(quotes_btn);
+
 
     // Create Clock Toggle button
     Evas_Object* clock_btn = elm_button_add(win);

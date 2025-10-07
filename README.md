@@ -56,13 +56,7 @@ It is intended to be used as digital picture frame software, but can also be use
 - Shared data structures
 - Cross-platform compatibility macros
 
-#### 7. **Network Overlay (`net.c/h`)**
-- Asynchronous HTTP fetch using `Ecore_Con_Url`
-- Overlay label positioned relative to content
-- One-shot fetch and optional periodic refresh
-- Simple start/stop lifecycle and cleanup
-
-#### 8. **Configuration and Persistence (`config.c/h`)**
+#### 7. **Configuration and Persistence (`config.c/h`)**
 - Runtime parsing of CLI options via `Ecore_Getopt`
 - Eet-based serialization to `./eslide.cfg`
 - Load persisted settings at startup, override with CLI, save on exit
@@ -130,7 +124,7 @@ Place your image and video files in the `./images/` directory:
 - **Shuffle**: Toggle random playback order
 - **Clock**: Toggle digital clock display
 - **Progress**: Toggle compact "index/total" overlay
-- **Quotes**: Toggle network overlay and periodic refresh
+
 - **Fullscreen**: Toggle fullscreen mode
 - **Close**: Exit application
 
@@ -185,22 +179,7 @@ Note: These options are applied at runtime. Slideshow interval and fade duration
 - The slideshow engine uses a hidden Evas image and `evas_object_image_preload` to cache the next image as soon as a fade begins. This reduces disk I/O stalls and visual stuttering when switching media.
 - During fade transitions, navigation is guarded by an `is_fading` flag. Rapid next/prev inputs are coalesced into a single pending navigation that runs immediately after the fade completes, preventing overlapping transitions.
 
-### Network Overlay
 
-The application can fetch and display a short weather summary from the internet:
-- Endpoint: `https://wttr.in/?format=3`
-- Display: Small white text label in the top-left overlay
-- Behavior: Starts a fetch after the window is shown; you can enable periodic refresh (default 60 seconds) via the Weather control
-
-Dependencies: Ensure `ecore-con` is available via `pkg-config`.
-
-### Command-Line Options for Weather
-
-Specify a weather location to override auto-detection:
-
-- `-l`, `--location <name>` — City or station code, e.g. `--location "San Francisco"`, `--location KJFK`.
-
-When provided, the Weather overlay fetches from `wttr.in/<location>?format=3`.
 
 ### Configuration Persistence
 

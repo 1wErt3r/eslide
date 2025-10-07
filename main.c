@@ -4,10 +4,7 @@
 #include "slideshow.h"
 #include "clock.h"
 #include "config.h"
-#include "net.h"
 
-// Forward declaration to satisfy C99 when header guards collide
-void net_set_station(const char* station_id);
 
 EAPI_MAIN int elm_main(int argc, char** argv)
 {
@@ -62,11 +59,6 @@ EAPI_MAIN int elm_main(int argc, char** argv)
 
     // Initialize clock (using letterbox_bg as parent)
     clock_init(letterbox_bg);
-    // Initialize network overlay label
-    net_init(letterbox_bg);
-    // Apply CLI-configured weather location, if provided
-    if (cfg.weather_location && *cfg.weather_location)
-        net_set_station(cfg.weather_location);
 
     // Set configurable images directory before scanning
     media_set_images_dir(cfg.images_dir);
@@ -114,7 +106,6 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     // Cleanup
     slideshow_cleanup();
     clock_cleanup();
-    net_cleanup();
     media_cleanup();
     ui_cleanup();
     config_eet_shutdown();

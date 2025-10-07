@@ -4,7 +4,7 @@
 PROGRAM = eslide
 
 # Source files
-SOURCES = main.c common.c media.c slideshow.c clock.c ui.c config.c net.c
+SOURCES = main.c common.c media.c slideshow.c clock.c ui.c config.c
 
 # Object files
 OBJECTS = $(SOURCES:.c=.o)
@@ -13,8 +13,8 @@ OBJECTS = $(SOURCES:.c=.o)
 CC = gcc
 
 # Get EFL compilation flags using pkg-config (add Eet for persistence)
-CFLAGS = `pkg-config --cflags elementary emotion ecore-con eet`
-LDFLAGS = `pkg-config --libs elementary emotion ecore-con eet`
+CFLAGS = `pkg-config --cflags elementary emotion eet`
+LDFLAGS = `pkg-config --libs elementary emotion eet`
 
 # Additional compiler flags for cross-platform compatibility
 CFLAGS += -std=c99
