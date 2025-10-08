@@ -4,6 +4,8 @@ A media slideshow application built with Enlightenment Foundation Libraries (EFL
 
 It is intended to be used as digital picture frame software, but can also be used for general media presentations. It automatically cycles through images and videos in the `./images/` directory. It provides a slideshow experience with smooth fade transitions, media controls, and an optional digital clock display.
 
+![eslide screenshot](shot.jpg)
+
 ## License and Credits
 
 This application is licensed under the two-clause BSD license.
