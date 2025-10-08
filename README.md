@@ -12,6 +12,11 @@ This application is licensed under the two-clause BSD license.
 
 Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/).
 
+Icon derived from https://en.wikipedia.org/wiki/File:Projecteur_de_diapositives_Prestinox_d%C3%A9but_des_ann%C3%A9es_1960.jpg 
+
+
+Icon licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/deed.en
+)
 
 ## Key Features
 

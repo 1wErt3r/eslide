@@ -44,13 +44,54 @@ $(PROGRAM): $(OBJECTS)
 clean:
 	rm -f $(OBJECTS) $(PROGRAM)
 
-# Install target (optional)
-install: $(PROGRAM)
-	cp $(PROGRAM) /usr/local/bin/
+# Installation directories (freedesktop-friendly)
+PREFIX ?= /usr/local
+DESTDIR ?=
+BINDIR  := $(PREFIX)/bin
+DATADIR := $(PREFIX)/share
+APPDIR  := $(DATADIR)/applications
+ICONDIR := $(DATADIR)/icons/hicolor/scalable/apps
+ICON_FILE ?= eslide.svg
+# If installing a PNG icon, set the target size (e.g., 64, 128)
+ICON_SIZE ?= 64
+ICON_SUFFIX := $(suffix $(ICON_FILE))
 
-# Uninstall target (optional)
-uninstall:
-	rm -f /usr/local/bin/$(PROGRAM)
+# Install binary and desktop integration
+install: $(PROGRAM) install-desktop
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 0755 $(PROGRAM) $(DESTDIR)$(BINDIR)/$(PROGRAM)
+
+# Install desktop entry and optional icon
+install-desktop:
+	install -d $(DESTDIR)$(APPDIR)
+	install -m 0644 eslide.desktop $(DESTDIR)$(APPDIR)/eslide.desktop
+	@ICON_SRC="$(ICON_FILE)"; \
+	if [ -f "$$ICON_SRC" ]; then \
+		EXT="$(ICON_SUFFIX)"; \
+		if [ "$$EXT" = ".svg" ]; then \
+			install -d $(DESTDIR)$(ICONDIR); \
+			install -m 0644 "$$ICON_SRC" $(DESTDIR)$(ICONDIR)/eslide.svg; \
+			echo "Installed icon: $(DESTDIR)$(ICONDIR)/eslide.svg"; \
+		elif [ "$$EXT" = ".png" ]; then \
+			PNGDIR=$(DESTDIR)$(DATADIR)/icons/hicolor/$(ICON_SIZE)x$(ICON_SIZE)/apps; \
+			install -d $$PNGDIR; \
+			install -m 0644 "$$ICON_SRC" $$PNGDIR/eslide.png; \
+			echo "Installed icon: $$PNGDIR/eslide.png"; \
+		else \
+			echo "Icon file extension not supported: $$EXT"; \
+		fi; \
+	else \
+		echo "Icon file '$(ICON_FILE)' not found; skipping icon install"; \
+	fi
+
+# Uninstall binary and desktop integration
+uninstall: uninstall-desktop
+	rm -f $(DESTDIR)$(BINDIR)/$(PROGRAM)
+
+uninstall-desktop:
+	rm -f $(DESTDIR)$(APPDIR)/eslide.desktop
+	rm -f $(DESTDIR)$(ICONDIR)/eslide.png
+	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/$(ICON_SIZE)x$(ICON_SIZE)/apps/eslide.png
 
 # Run the program
 run: $(PROGRAM)
@@ -104,8 +145,13 @@ help:
 	@echo "  clean          - Remove build artifacts"
 	@echo "  run            - Build and run the program"
 	@echo "  check-deps     - Check if EFL dependencies are installed"
-	@echo "  install        - Install the program to /usr/local/bin"
-	@echo "  uninstall      - Remove the program from /usr/local/bin"
+	@echo "  install        - Install binary and desktop entry (PREFIX=$(PREFIX))"
+	@echo "  install-desktop- Install only desktop entry and optional icon"
+	@echo "  uninstall      - Remove binary and desktop entry"
+	@echo "  uninstall-desktop- Remove only desktop entry and icon"
+	@echo "\nIcon install options:"
+	@echo "  ICON_FILE=<path>  - Provide icon file (default: eslide.svg; supports .svg or .png)"
+	@echo "  ICON_SIZE=<N>     - PNG icon size directory (default: 64 => hicolor/64x64/apps)"
 	@echo "  help           - Show this help message"
 	@echo ""
 	@echo "Warning level targets (progressive difficulty):"
@@ -124,4 +170,4 @@ test_cache: test_cache.o
 	gcc test_cache.o -o test_cache
 
 # Declare phony targets
-.PHONY: all clean install uninstall run check-deps help warn-basic warn-medium warn-strict warn-pedantic check-warnings test-cache
+.PHONY: all clean install uninstall install-desktop uninstall-desktop run check-deps help warn-basic warn-medium warn-strict warn-pedantic check-warnings test-cache

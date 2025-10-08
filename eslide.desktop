@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=eslide
+Comment=EFL-based media slideshow application with automatic playback
+Exec=eslide
+Icon=eslide
+Categories=Graphics;Viewer;
+Keywords=slideshow;media;images;videos;presentation;
+Terminal=false
+StartupNotify=false
