@@ -135,6 +135,7 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     cfg.clock_24h = clock_is_24h;
     cfg.weather_visible = weather_visible;
     cfg.news_visible = news_visible;
+    cfg.images_dir = media_get_images_dir();
     config_save_to_eet(&cfg, cfg_path);
 
     // Cleanup

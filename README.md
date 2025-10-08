@@ -2,7 +2,7 @@
 
 A media slideshow application built with Enlightenment Foundation Libraries (EFL), featuring automatic image/video playback, smooth transitions, and interactive controls.
 
-It is intended to be used as digital picture frame software, but can also be used for general media presentations. It automatically cycles through images and videos in the `./images/` directory. It provides a slideshow experience with smooth fade transitions, media controls, and an optional digital clock display.
+It is intended to be used as digital picture frame software, but can also be used for general media presentations. It automatically cycles through images and videos in a folder. It provides a slideshow experience with smooth fade transitions, media controls, and an optional digital clock display.
 
 ![eslide screenshot](shot.jpg)
 
@@ -134,6 +134,18 @@ Place your image and video files in the `./images/` directory:
 - **Supported Videos**: MP4, AVI, MOV, MKV
 - **File Naming**: Any valid filename (application scans automatically)
 
+### Choosing Images Folder
+
+You can change the slideshow’s source folder at runtime using the built‑in picker:
+- Click inside the media area to show the control panel.
+- Click `Folder…` to open the folder chooser.
+- Select a directory; the app rescans and starts from the first item.
+- The chosen folder is saved to `./eslide.cfg` and used next launch.
+
+Notes:
+- Default source is `./images/` if no folder is chosen.
+- Command line still supports `--images-dir <path>`; runtime choice overrides it for the session and persists on exit.
+
 ### Controls and Navigation
 
 #### On-Screen Controls
@@ -146,6 +158,7 @@ Place your image and video files in the `./images/` directory:
 
 - **Fullscreen**: Toggle fullscreen mode
 - **Close**: Exit application
+- **Folder…**: Choose a directory for images/videos (folder-only picker)
 
 #### Mouse Controls
 - **Click**: Toggle control panel visibility

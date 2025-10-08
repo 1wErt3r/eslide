@@ -5,6 +5,7 @@
 #include "weather.h"
 #include "news.h"
 #include <strings.h>
+#include <string.h>
 #include <Ecore.h>
 #include <Evas.h>
 
@@ -76,6 +77,30 @@ static void controls_reset_inactivity_timer(void)
 Evas_Object* slideshow_image = NULL;
 Evas_Object* slideshow_video = NULL;
 Evas_Object* letterbox_bg = NULL;
+
+// Helper to ensure directory paths end with a trailing slash
+static char* _ensure_trailing_slash(const char* path)
+{
+    if (!path)
+        return NULL;
+    size_t len = strlen(path);
+    if (len == 0)
+        return NULL;
+    if (path[len - 1] == '/') {
+        char* out = malloc(len + 1);
+        if (!out)
+            return NULL;
+        memcpy(out, path, len + 1);
+        return out;
+    }
+    char* out = malloc(len + 2);
+    if (!out)
+        return NULL;
+    memcpy(out, path, len);
+    out[len] = '/';
+    out[len + 1] = '\0';
+    return out;
+}
 
 // Double-click on letterbox to toggle fullscreen
 static void on_letterbox_mouse_down(
@@ -215,6 +240,36 @@ void on_news_toggle_click(void* data EINA_UNUSED, Evas_Object* obj, void* event_
     controls_reset_inactivity_timer();
     news_toggle();
     elm_object_text_set(obj, news_visible ? "News: ON" : "News: OFF");
+}
+
+// Callback for fileselector button when a folder is chosen
+static void on_images_dir_chosen(
+    void* data EINA_UNUSED, Evas_Object* obj EINA_UNUSED, void* event_info)
+{
+    const char* chosen_path = (const char*) event_info;
+    if (!chosen_path || !*chosen_path)
+        return;
+
+    char* normalized = _ensure_trailing_slash(chosen_path);
+    if (!normalized)
+        return;
+
+    INF("Images directory chosen: %s", normalized);
+    media_set_images_dir(normalized);
+
+    // Refresh media listing and show first item if available
+    scan_media_files();
+    int count = get_media_file_count();
+    if (count > 0) {
+        current_media_index = 0;
+        char* first = get_media_path_at_index(0);
+        if (first) {
+            show_media_immediate(first);
+        }
+        ui_progress_update_index(current_media_index, count);
+    } else {
+        WRN("No media found in selected directory");
+    }
 }
 
 
@@ -440,6 +495,22 @@ void ui_create_controls(Evas_Object* parent_box, Evas_Object* win)
     evas_object_size_hint_align_set(progress_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
     elm_box_pack_end(button_box, progress_btn);
     evas_object_show(progress_btn);
+
+    // Create Images Directory picker button (folder-only)
+    Evas_Object* dir_btn = elm_fileselector_button_add(win);
+    elm_object_text_set(dir_btn, "Folder…");
+    elm_fileselector_button_folder_only_set(dir_btn, EINA_TRUE);
+    // Prefer opening in an inner window to keep context
+    elm_fileselector_button_inwin_mode_set(dir_btn, EINA_TRUE);
+    // Start from current images directory if available
+    const char* start_dir = media_get_images_dir();
+    if (start_dir)
+        elm_fileselector_button_path_set(dir_btn, start_dir);
+    evas_object_smart_callback_add(dir_btn, "file,chosen", on_images_dir_chosen, NULL);
+    evas_object_size_hint_weight_set(dir_btn, EVAS_HINT_EXPAND, EVAS_HINT_EXPAND);
+    evas_object_size_hint_align_set(dir_btn, EVAS_HINT_FILL, EVAS_HINT_FILL);
+    elm_box_pack_end(button_box, dir_btn);
+    evas_object_show(dir_btn);
 
     // Create Fullscreen button
     Evas_Object* fullscreen_btn = elm_button_add(win);

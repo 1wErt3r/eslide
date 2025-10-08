@@ -23,6 +23,11 @@ void media_set_images_dir(const char* path)
     }
 }
 
+const char* media_get_images_dir(void)
+{
+    return images_dir_runtime;
+}
+
 // Function to check if a file has an image extension
 Eina_Bool is_image_file(const char* filename)
 {

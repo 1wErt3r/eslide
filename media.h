@@ -23,6 +23,8 @@ void media_cleanup(void);
 
 // Runtime configuration setter
 void media_set_images_dir(const char* path);
+// Runtime configuration getter
+const char* media_get_images_dir(void);
 
 // Cache management functions
 void media_cache_invalidate(void);
