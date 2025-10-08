@@ -29,8 +29,7 @@ Icon licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.
 - **Digital Clock**: Optional clock overlay with automatic positioning
 - **Weather Overlay**: Optional compact weather display updated every 60 seconds
 - **News Overlay**: Optional RSS headlines overlay refreshed hourly and rotated every 8 seconds
-- **Web Message Overlay**: Fetches a short message from the internet at startup
-- **Media Detection**: Automatically scans `./images/` directory for supported media files
+- **Media Detection**: Automatically scans `./images/` directory or your chosen directory for supported media files
 
 ## Architecture
 
@@ -84,7 +83,7 @@ Icon licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.
 
 ### Data Flow
 
-1. **Initialization**: Application scans `./images/` directory for media files
+1. **Initialization**: Application scans `./images/` directory for media files by default
 2. **Display**: First media item is shown immediately
 3. **Slideshow**: Timer triggers automatic progression with fade transitions
 4. **User Control**: Interactive controls allow manual navigation and settings
@@ -126,15 +125,15 @@ Icon licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.
 - `make clean` - Remove build artifacts
 - `make run` - Build and run the application
 - `make check-deps` - Verify EFL dependencies
-- `make install` - Install to `/usr/local/bin/`
-- `make uninstall` - Remove from `/usr/local/bin/`
+- `make install` 
+- `make uninstall`
 - `make help` - Show available targets
 
 ## Usage Guide
 
 ### Adding Media Content
 
-Place your image and video files in the `./images/` directory:
+Place your image and video files in the `./images/` directory or choose a folder in the UI:
 - **Supported Images**: JPEG, PNG, GIF, BMP
 - **Supported Videos**: MP4, AVI, MOV, MKV
 - **File Naming**: Any valid filename (application scans automatically)
