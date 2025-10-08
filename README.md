@@ -147,14 +147,6 @@ Place your image and video files in the `./images/` directory:
 - **Fullscreen**: Toggle fullscreen mode
 - **Close**: Exit application
 
-#### Keyboard Shortcuts
-- **Space**: Toggle slideshow play/pause
-- **Right Arrow**: Next media item
-- **F**: Toggle fullscreen
-- **C**: Toggle clock display
-- **S**: Toggle shuffle mode
-- **Escape**: Exit application
-
 #### Mouse Controls
 - **Click**: Toggle control panel visibility
 

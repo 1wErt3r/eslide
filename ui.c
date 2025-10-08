@@ -228,41 +228,7 @@ static void on_progress_toggle_click(
     elm_object_text_set(obj, progress_visible ? "Progress: ON" : "Progress: OFF");
 }
 
-// Keyboard handler to support shortcuts (Space, Left/Right, F, C, S, Escape)
-static void on_key_down(
-    void* data, Evas* e EINA_UNUSED, Evas_Object* obj EINA_UNUSED, void* event_info)
-{
-    Evas_Event_Key_Down* ev = (Evas_Event_Key_Down*) event_info;
-    if (!ev || !ev->key)
-        return;
-    const char* key = ev->key;
 
-    // Any key press resets inactivity timer
-    controls_reset_inactivity_timer();
-
-    if (!strcasecmp(key, "space")) {
-        toggle_slideshow();
-        INF("Keyboard: Toggle slideshow");
-    } else if (!strcasecmp(key, "Right")) {
-        show_next_media();
-        INF("Keyboard: Next media");
-    } else if (!strcasecmp(key, "Left")) {
-        show_prev_media();
-        INF("Keyboard: Previous media");
-    } else if (!strcasecmp(key, "f")) {
-        on_fullscreen_click(data, NULL, NULL);
-        INF("Keyboard: Toggle fullscreen");
-    } else if (!strcasecmp(key, "c")) {
-        toggle_clock();
-        INF("Keyboard: Toggle clock");
-    } else if (!strcasecmp(key, "s")) {
-        toggle_shuffle_mode();
-        INF("Keyboard: Toggle shuffle");
-    } else if (!strcasecmp(key, "Escape")) {
-        INF("Keyboard: Exit application");
-        elm_exit();
-    }
-}
 
 // Function to toggle control visibility
 void toggle_controls(void)
@@ -296,8 +262,6 @@ Evas_Object* ui_create_main_window(Evas_Object** win_bg_out)
     // Create main window
     win = elm_win_util_standard_add("eslide", "eslide");
     evas_object_smart_callback_add(win, "delete,request", on_done, NULL);
-    // Add keyboard shortcuts handler
-    evas_object_event_callback_add(win, EVAS_CALLBACK_KEY_DOWN, on_key_down, win);
 
     // Set a reasonable default window size
     evas_object_resize(win, DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT);
