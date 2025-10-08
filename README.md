@@ -4,6 +4,13 @@ A media slideshow application built with Enlightenment Foundation Libraries (EFL
 
 It is intended to be used as digital picture frame software, but can also be used for general media presentations. It automatically cycles through images and videos in the `./images/` directory. It provides a slideshow experience with smooth fade transitions, media controls, and an optional digital clock display.
 
+## License and Credits
+
+This application is licensed under the two-clause BSD license.
+
+Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/).
+
+
 ## Key Features
 
 - **Automatic Slideshow**: Cycles through media files every 30 seconds
@@ -214,11 +221,6 @@ export EINA_LOG_LEVEL=4
 ./eslide
 ```
 
-## License and Credits
-
-This application is licensed under the two-clause BSD license.
-
-Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/).
 ## News Overlay Details
 
 The application displays rotating headlines sourced from the New York Times Home Page RSS feed:
