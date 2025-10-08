@@ -4,6 +4,7 @@
 #include "slideshow.h"
 #include "clock.h"
 #include "weather.h"
+#include "news.h"
 #include "config.h"
 
 
@@ -50,6 +51,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     clock_set_24h(cfg.clock_24h);
     // Ensure weather toggle reflects --weather/--no-weather at startup
     weather_visible = cfg.weather_visible;
+    // Ensure news toggle reflects --news/--no-news at startup
+    news_visible = cfg.news_visible;
 
     // Create main window and get the background
     win = ui_create_main_window(&win_bg);
@@ -76,6 +79,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     clock_init(letterbox_bg);
     // Initialize weather overlay (using letterbox_bg as parent)
     weather_init(letterbox_bg);
+    // Initialize news overlay (using letterbox_bg as parent)
+    news_init(letterbox_bg);
     // Configure NOAA station from config
     weather_set_station(cfg.weather_station);
 
@@ -100,6 +105,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     clock_start();
     // Start weather polling
     weather_start();
+    // Start news polling and rotation
+    news_start();
 
     // Set fullscreen from config and show window
     elm_win_fullscreen_set(win, cfg.fullscreen);
@@ -111,6 +118,8 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     on_letterbox_resize(NULL, NULL, letterbox_bg, NULL);
     // Trigger initial weather positioning
     on_letterbox_resize_weather(NULL, NULL, letterbox_bg, NULL);
+    // Trigger initial news positioning
+    on_letterbox_resize_news(NULL, NULL, letterbox_bg, NULL);
 
     // Run main loop
     INF("Starting main loop");
@@ -125,12 +134,14 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     cfg.clock_visible = clock_visible;
     cfg.clock_24h = clock_is_24h;
     cfg.weather_visible = weather_visible;
+    cfg.news_visible = news_visible;
     config_save_to_eet(&cfg, cfg_path);
 
     // Cleanup
     slideshow_cleanup();
     clock_cleanup();
     weather_cleanup();
+    news_cleanup();
     media_cleanup();
     ui_cleanup();
     config_eet_shutdown();

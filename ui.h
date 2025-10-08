@@ -20,6 +20,7 @@ void on_shuffle_click(void* data, Evas_Object* obj, void* event_info);
 void on_media_click(void* data, Evas_Object* obj, void* event_info);
 void on_clock_toggle_click(void* data, Evas_Object* obj, void* event_info);
 void on_weather_toggle_click(void* data, Evas_Object* obj, void* event_info);
+void on_news_toggle_click(void* data, Evas_Object* obj, void* event_info);
 
 // UI control functions
 void toggle_controls(void);

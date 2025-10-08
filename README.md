@@ -4,6 +4,13 @@ A media slideshow application built with Enlightenment Foundation Libraries (EFL
 
 It is intended to be used as digital picture frame software, but can also be used for general media presentations. It automatically cycles through images and videos in the `./images/` directory. It provides a slideshow experience with smooth fade transitions, media controls, and an optional digital clock display.
 
+## License and Credits
+
+This application is licensed under the two-clause BSD license.
+
+Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/).
+
+
 ## Key Features
 
 - **Automatic Slideshow**: Cycles through media files every 30 seconds
@@ -14,6 +21,7 @@ It is intended to be used as digital picture frame software, but can also be use
 - **Fullscreen Display**: Full-screen presentation mode
 - **Digital Clock**: Optional clock overlay with automatic positioning
 - **Weather Overlay**: Optional compact weather display updated every 60 seconds
+- **News Overlay**: Optional RSS headlines overlay refreshed hourly and rotated every 8 seconds
 - **Web Message Overlay**: Fetches a short message from the internet at startup
 - **Media Detection**: Automatically scans `./images/` directory for supported media files
 
@@ -62,6 +70,11 @@ It is intended to be used as digital picture frame software, but can also be use
 - Eet-based serialization to `./eslide.cfg`
 - Load persisted settings at startup, override with CLI, save on exit
 
+#### 8. **News Module (`news.c/h`)**
+- RSS headlines overlay displaying top news titles
+- Hourly fetch with compact top-centered overlay and mixed line wrapping
+- Title rotation every 8 seconds; toggle visibility via UI button or CLI flags
+
 ### Data Flow
 
 1. **Initialization**: Application scans `./images/` directory for media files
@@ -75,6 +88,7 @@ It is intended to be used as digital picture frame software, but can also be use
 ### Prerequisites
 
 - **EFL (Enlightenment Foundation Libraries)** 
+- **libxml2** for XML parsing (weather data)
 - **pkg-config** for dependency management
 - **GCC compiler** with C99 support
 
@@ -125,6 +139,7 @@ Place your image and video files in the `./images/` directory:
 - **Shuffle**: Toggle random playback order
 - **Clock**: Toggle digital clock display
 - **Weather**: Toggle compact weather overlay (updates every 60 seconds)
+- **News**: Toggle compact news overlay (rotating headlines)
 - **Progress**: Toggle compact "index/total" overlay
 
 - **Fullscreen**: Toggle fullscreen mode
@@ -154,6 +169,7 @@ You can override defaults at startup using flags:
 - `--clock-24h` / `--clock-12h` — select 24-hour or 12-hour time format
 - `--weather` / `--no-weather` — show or hide the weather overlay
 - `--weather-station CODE` — NOAA station code (default `KNYC`)
+- `--news` / `--no-news` — show or hide the news overlay
 - `--version` or `-V` — print version information
 - `--help` or `-h` — show help
 
@@ -163,6 +179,7 @@ Examples:
 ./eslide --interval 8 --fade 0.75
 ./eslide --images-dir ./pictures --shuffle --clock
 ./eslide --weather --weather-station KNYC
+./eslide --news
 ./eslide --no-fullscreen --no-shuffle
 ```
 
@@ -204,17 +221,23 @@ export EINA_LOG_LEVEL=4
 ./eslide
 ```
 
-## License and Credits
+## News Overlay Details
 
-This application is licensed under the two-clause BSD license.
+The application displays rotating headlines sourced from the New York Times Home Page RSS feed:
+`https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml`. Headlines are parsed using libxml2
+with XPath (`//item/title`). The overlay fetches new data hourly and rotates through the parsed
+titles every 8 seconds. It is hidden by default and can be toggled on/off via the on-screen "News"
+button or the `--news` / `--no-news` CLI flags.
 
-Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/).
+The headline label is positioned near the top-center of the content area, uses mixed line wrapping
+for longer titles, and is styled for readability.
 ## Weather Overlay Details
 
-The application fetches current conditions from the public NOAA National Weather Service JSON API:
-`https://api.weather.gov/stations/<STATION>/observations/latest`. Only the temperature is displayed (°F or °C
-depending on the response). The default station is `KNYC`, and it can be overridden with the
-`--weather-station` CLI flag.
+The application fetches current conditions from the public NOAA National Weather Service API:
+`https://api.weather.gov/stations/<STATION>/observations/latest`. The application requests data in 
+NOAA's XML format (`application/vnd.noaa.obs+xml`) and uses libxml2 with XPath for robust parsing.
+Only the temperature is displayed in Fahrenheit. The default station is `KNYC`, and it can be 
+overridden with the `--weather-station` CLI flag.
 
 The overlay appears in the lower-left of the content area, scaled up for readability, and is
 clamped to fit within the visible area. It can be toggled on/off via the on-screen "Weather"
