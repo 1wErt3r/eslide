@@ -73,7 +73,9 @@ Icon licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.
 
 #### 7. **Configuration and Persistence (`config.c/h`)**
 - Runtime parsing of CLI options via `Ecore_Getopt`
-- Eet-based serialization to `./eslide.cfg`
+- XDG Base Directory Specification compliance with backwards compatibility
+- Eet-based serialization to XDG location (`~/.config/eslide/eslide.cfg`)
+- Automatic fallback to local `eslide.cfg` for existing installations
 - Load persisted settings at startup, override with CLI, save on exit
 
 #### 8. **News Module (`news.c/h`)**
@@ -90,6 +92,13 @@ Icon licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.
 5. **Cleanup**: Proper resource deallocation on exit
 
 ## Installation and Setup
+
+### What's New in This Version
+
+**XDG Configuration Support**: The application now follows XDG Base Directory Specification for configuration files:
+- Configuration is stored in `~/.config/eslide/eslide.cfg` by default
+- Maintains full backwards compatibility with existing `eslide.cfg` files
+- Automatic migration path for existing users
 
 ### Prerequisites
 
@@ -216,13 +225,29 @@ Note: These options are applied at runtime. Slideshow interval and fade duration
 
 ### Configuration Persistence
 
-Settings are persisted using Eet in a file next to the executable:
-- Path: `./eslide.cfg`
-- Startup: Load persisted settings, then merge CLI overrides
-- Shutdown: Save last-used settings (interval, fade, images dir, fullscreen, shuffle, clock visibility, 12/24h)
-  and weather visibility
+Settings are persisted using Eet following XDG Base Directory Specification:
 
-This allows the app to remember your preferences between runs.
+**XDG Standard Location**: 
+- Primary: `~/.config/eslide/eslide.cfg` 
+- Custom: `$XDG_CONFIG_HOME/eslide/eslide.cfg` (if `XDG_CONFIG_HOME` is set)
+
+**Backwards Compatibility**: 
+- If `eslide.cfg` exists in the current working directory, it will be used instead
+- This ensures existing users can continue using their current configuration without migration
+
+**Migration Path**:
+- **New installations**: Configuration will be created in the XDG location
+- **Existing users**: Your current `eslide.cfg` in the application directory will continue to work
+- **Manual migration**: Simply move your `eslide.cfg` to `~/.config/eslide/eslide.cfg`
+
+**How it works**:
+1. **Startup**: Application checks for `eslide.cfg` in current directory first (backwards compatibility)
+2. **Fallback**: If no local config exists, uses XDG location (`~/.config/eslide/eslide.cfg`)
+3. **Directory creation**: XDG config directory is created automatically if needed
+4. **Settings merge**: Load persisted settings, then apply CLI overrides
+5. **Shutdown**: Save current settings (interval, fade, images dir, fullscreen, shuffle, clock visibility, 12/24h, weather visibility)
+
+This approach allows the app to remember your preferences between runs while following modern Linux standards and maintaining full backwards compatibility.
 
 ### Debugging
 

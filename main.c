@@ -11,7 +11,11 @@
 EAPI_MAIN int elm_main(int argc, char** argv)
 {
     Evas_Object *win, *win_bg, *box;
-    const char* cfg_path = "./eslide.cfg";
+    char* cfg_path = config_get_config_path_with_fallback("eslide", "eslide.cfg");
+    if (!cfg_path) {
+        ERR("Failed to determine config file path");
+        return -1;
+    }
 
     // Check for help/version arguments early - exit before any UI initialization
     for (int i = 1; i < argc; i++) {
@@ -147,12 +151,20 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     ui_cleanup();
     config_eet_shutdown();
     common_cleanup_logging();
+    
+    // Free config path memory
+    if (cfg_path) {
+        free(cfg_path);
+    }
 
     return 0;
 
 error:
     config_eet_shutdown();
     common_cleanup_logging();
+    if (cfg_path) {
+        free(cfg_path);
+    }
     return -1;
 }
 

@@ -1,4 +1,6 @@
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <Ecore.h>
 #include <Ecore_Getopt.h>
 #include <Eet.h>
@@ -198,6 +200,89 @@ App_Config config_parse(int argc, char** argv)
     App_Config cfg = config_defaults();
     config_merge_cli(&cfg, argc, argv);
     return cfg;
+}
+
+// Get XDG config path following XDG Base Directory Specification
+char* config_get_xdg_config_path(const char* app_name, const char* filename)
+{
+    if (!app_name || !filename) return NULL;
+    
+    const char* xdg_config_home = getenv("XDG_CONFIG_HOME");
+    char* config_path = NULL;
+    
+    if (xdg_config_home && *xdg_config_home) {
+        // Use XDG_CONFIG_HOME if set
+        config_path = malloc(strlen(xdg_config_home) + strlen(app_name) + strlen(filename) + 3);
+        if (config_path) {
+            sprintf(config_path, "%s/%s/%s", xdg_config_home, app_name, filename);
+        }
+    } else {
+        // Fallback to ~/.config/app_name/filename
+        const char* home = getenv("HOME");
+        if (home && *home) {
+            config_path = malloc(strlen(home) + strlen("/.config/") + strlen(app_name) + strlen(filename) + 3);
+            if (config_path) {
+                sprintf(config_path, "%s/.config/%s/%s", home, app_name, filename);
+            }
+        }
+    }
+    
+    return config_path;
+}
+
+// Get config path with backwards compatibility fallback
+char* config_get_config_path_with_fallback(const char* app_name, const char* filename)
+{
+    if (!app_name || !filename) return NULL;
+    
+    // First try XDG path
+    char* xdg_path = config_get_xdg_config_path(app_name, filename);
+    if (xdg_path) {
+        // Check if XDG config exists
+        if (access(xdg_path, F_OK) == 0) {
+            return xdg_path;
+        }
+        
+        // Check if XDG directory exists, if not create it
+        char* dir_end = strrchr(xdg_path, '/');
+        if (dir_end) {
+            *dir_end = '\0'; // Temporarily null-terminate at directory
+            struct stat st;
+            if (stat(xdg_path, &st) != 0) {
+                // Directory doesn't exist, try to create it
+                char* mkdir_cmd = malloc(strlen("mkdir -p ") + strlen(xdg_path) + 1);
+                if (mkdir_cmd) {
+                    sprintf(mkdir_cmd, "mkdir -p %s", xdg_path);
+                    int result = system(mkdir_cmd);
+                    free(mkdir_cmd);
+                    if (result != 0) {
+                        WRN("Failed to create XDG config directory: %s", xdg_path);
+                    }
+                }
+            }
+            *dir_end = '/'; // Restore the slash
+        }
+        
+        // XDG path doesn't exist yet, but we'll use it for new configs
+        free(xdg_path);
+    }
+    
+    // Check for backwards compatibility - config file in current working directory
+    // This provides backwards compatibility with the old behavior
+    char* legacy_path = malloc(2 + strlen(filename) + 1);
+    if (legacy_path) {
+        sprintf(legacy_path, "./%s", filename);
+        
+        // If legacy config exists in current directory, use it (backwards compatibility)
+        if (access(legacy_path, F_OK) == 0) {
+            return legacy_path;
+        }
+        
+        free(legacy_path);
+    }
+    
+    // No legacy config found, return XDG path (or NULL if XDG not available)
+    return config_get_xdg_config_path(app_name, filename);
 }
 
 void config_log(const App_Config* cfg)

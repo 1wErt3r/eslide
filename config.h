@@ -35,4 +35,8 @@ Eina_Bool config_save_to_eet(const App_Config* cfg, const char* path);
 // Merge CLI options over an existing config (in-place)
 void config_merge_cli(App_Config* cfg, int argc, char** argv);
 
+// XDG Base Directory support
+char* config_get_xdg_config_path(const char* app_name, const char* filename);
+char* config_get_config_path_with_fallback(const char* app_name, const char* filename);
+
 #endif /* CONFIG_H */
