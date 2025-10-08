@@ -14,6 +14,7 @@ It is intended to be used as digital picture frame software, but can also be use
 - **Fullscreen Display**: Full-screen presentation mode
 - **Digital Clock**: Optional clock overlay with automatic positioning
 - **Weather Overlay**: Optional compact weather display updated every 60 seconds
+- **News Overlay**: Optional RSS headlines overlay refreshed hourly and rotated every 8 seconds
 - **Web Message Overlay**: Fetches a short message from the internet at startup
 - **Media Detection**: Automatically scans `./images/` directory for supported media files
 
@@ -61,6 +62,11 @@ It is intended to be used as digital picture frame software, but can also be use
 - Runtime parsing of CLI options via `Ecore_Getopt`
 - Eet-based serialization to `./eslide.cfg`
 - Load persisted settings at startup, override with CLI, save on exit
+
+#### 8. **News Module (`news.c/h`)**
+- RSS headlines overlay displaying top news titles
+- Hourly fetch with compact top-centered overlay and mixed line wrapping
+- Title rotation every 8 seconds; toggle visibility via UI button or CLI flags
 
 ### Data Flow
 
@@ -126,6 +132,7 @@ Place your image and video files in the `./images/` directory:
 - **Shuffle**: Toggle random playback order
 - **Clock**: Toggle digital clock display
 - **Weather**: Toggle compact weather overlay (updates every 60 seconds)
+- **News**: Toggle compact news overlay (rotating headlines)
 - **Progress**: Toggle compact "index/total" overlay
 
 - **Fullscreen**: Toggle fullscreen mode
@@ -155,6 +162,7 @@ You can override defaults at startup using flags:
 - `--clock-24h` / `--clock-12h` — select 24-hour or 12-hour time format
 - `--weather` / `--no-weather` — show or hide the weather overlay
 - `--weather-station CODE` — NOAA station code (default `KNYC`)
+- `--news` / `--no-news` — show or hide the news overlay
 - `--version` or `-V` — print version information
 - `--help` or `-h` — show help
 
@@ -164,6 +172,7 @@ Examples:
 ./eslide --interval 8 --fade 0.75
 ./eslide --images-dir ./pictures --shuffle --clock
 ./eslide --weather --weather-station KNYC
+./eslide --news
 ./eslide --no-fullscreen --no-shuffle
 ```
 
@@ -210,6 +219,16 @@ export EINA_LOG_LEVEL=4
 This application is licensed under the two-clause BSD license.
 
 Built with [Enlightenment Foundation Libraries](https://www.enlightenment.org/).
+## News Overlay Details
+
+The application displays rotating headlines sourced from the New York Times Home Page RSS feed:
+`https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml`. Headlines are parsed using libxml2
+with XPath (`//item/title`). The overlay fetches new data hourly and rotates through the parsed
+titles every 8 seconds. It is hidden by default and can be toggled on/off via the on-screen "News"
+button or the `--news` / `--no-news` CLI flags.
+
+The headline label is positioned near the top-center of the content area, uses mixed line wrapping
+for longer titles, and is styled for readability.
 ## Weather Overlay Details
 
 The application fetches current conditions from the public NOAA National Weather Service API:
