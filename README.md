@@ -28,6 +28,7 @@ Icon licensed under [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.
 - **Fullscreen Display**: Full-screen presentation mode
 - **Digital Clock**: Optional clock overlay with automatic positioning
 - **Weather Overlay**: Optional compact weather display updated every 60 seconds
+- **Plaintext Endpoint Overlay**: Optional single-line text fetched from an HTTP endpoint
 - **News Overlay**: Optional RSS headlines overlay refreshed hourly and rotated every 8 seconds
 - **Media Detection**: Automatically scans `./images/` directory or your chosen directory for supported media files
 
@@ -189,6 +190,8 @@ You can override defaults at startup using flags:
 - `--clock-24h` / `--clock-12h` — select 24-hour or 12-hour time format
 - `--weather` / `--no-weather` — show or hide the weather overlay
 - `--weather-station CODE` — NOAA station code (default `KNYC`)
+- `--endpoint URL` — fetch plaintext from an HTTP endpoint and display below weather
+- `--endpoint-interval SECONDS` — polling interval for `--endpoint` (default `60`)
 - `--news` / `--no-news` — show or hide the news overlay
 - `--version` or `-V` — print version information
 - `--help` or `-h` — show help
@@ -199,6 +202,7 @@ Examples:
 ./eslide --interval 8 --fade 0.75
 ./eslide --images-dir ./pictures --shuffle --clock
 ./eslide --weather --weather-station KNYC
+./eslide --endpoint https://wttr.in/?format=1 --endpoint-interval 30
 ./eslide --news
 ./eslide --no-fullscreen --no-shuffle
 ```

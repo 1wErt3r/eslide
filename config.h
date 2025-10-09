@@ -14,6 +14,8 @@ typedef struct {
     Eina_Bool weather_visible;   // weather overlay visibility
     const char* weather_station; // NOAA station code (e.g., KNYC)
     Eina_Bool news_visible;      // news overlay visibility
+    const char* endpoint_url;    // plaintext endpoint URL (e.g., http://host/path)
+    double endpoint_interval;    // polling interval for endpoint (seconds)
 } App_Config;
 
 // Initialize defaults from compile-time constants and current module defaults

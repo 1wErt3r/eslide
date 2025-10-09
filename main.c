@@ -87,6 +87,9 @@ EAPI_MAIN int elm_main(int argc, char** argv)
     news_init(letterbox_bg);
     // Configure NOAA station from config
     weather_set_station(cfg.weather_station);
+    // Configure plaintext endpoint from config (if provided)
+    weather_set_endpoint(cfg.endpoint_url);
+    weather_set_endpoint_interval(cfg.endpoint_interval);
 
     // Set configurable images directory before scanning
     media_set_images_dir(cfg.images_dir);

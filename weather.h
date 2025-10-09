@@ -28,4 +28,8 @@ void on_letterbox_resize_weather(void* data, Evas* e, Evas_Object* obj, void* ev
 // Configure NOAA station code used for weather requests (e.g., "KNYC")
 void weather_set_station(const char* station_code);
 
+// Configure plaintext endpoint below weather overlay
+void weather_set_endpoint(const char* endpoint_url);
+void weather_set_endpoint_interval(double seconds);
+
 #endif /* WEATHER_H */
