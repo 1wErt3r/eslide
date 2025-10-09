@@ -51,7 +51,7 @@ BINDIR  := $(PREFIX)/bin
 DATADIR := $(PREFIX)/share
 APPDIR  := $(DATADIR)/applications
 ICONDIR := $(DATADIR)/icons/hicolor/scalable/apps
-ICON_FILE ?= eslide.svg
+ICON_FILE ?= eslide.png
 # If installing a PNG icon, set the target size (e.g., 64, 128)
 ICON_SIZE ?= 64
 ICON_SUFFIX := $(suffix $(ICON_FILE))
@@ -68,11 +68,7 @@ install-desktop:
 	@ICON_SRC="$(ICON_FILE)"; \
 	if [ -f "$$ICON_SRC" ]; then \
 		EXT="$(ICON_SUFFIX)"; \
-		if [ "$$EXT" = ".svg" ]; then \
-			install -d $(DESTDIR)$(ICONDIR); \
-			install -m 0644 "$$ICON_SRC" $(DESTDIR)$(ICONDIR)/eslide.svg; \
-			echo "Installed icon: $(DESTDIR)$(ICONDIR)/eslide.svg"; \
-		elif [ "$$EXT" = ".png" ]; then \
+		if [ "$$EXT" = ".png" ]; then \
 			PNGDIR=$(DESTDIR)$(DATADIR)/icons/hicolor/$(ICON_SIZE)x$(ICON_SIZE)/apps; \
 			install -d $$PNGDIR; \
 			install -m 0644 "$$ICON_SRC" $$PNGDIR/eslide.png; \
@@ -90,7 +86,6 @@ uninstall: uninstall-desktop
 
 uninstall-desktop:
 	rm -f $(DESTDIR)$(APPDIR)/eslide.desktop
-	rm -f $(DESTDIR)$(ICONDIR)/eslide.png
 	rm -f $(DESTDIR)$(DATADIR)/icons/hicolor/$(ICON_SIZE)x$(ICON_SIZE)/apps/eslide.png
 
 # Run the program
@@ -150,7 +145,7 @@ help:
 	@echo "  uninstall      - Remove binary and desktop entry"
 	@echo "  uninstall-desktop- Remove only desktop entry and icon"
 	@echo "\nIcon install options:"
-	@echo "  ICON_FILE=<path>  - Provide icon file (default: eslide.svg; supports .svg or .png)"
+	@echo "  ICON_FILE=<path>  - Provide icon file (default: eslide.png; supports .svg or .png)"
 	@echo "  ICON_SIZE=<N>     - PNG icon size directory (default: 64 => hicolor/64x64/apps)"
 	@echo "  help           - Show this help message"
 	@echo ""
