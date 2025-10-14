@@ -1,4 +1,4 @@
-AC_INIT([eslide], [1.0], [your-email@example.com])
+AC_INIT([eslide], [0.0.2], [root@politebot.com])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_PROG_CC
 PKG_CHECK_MODULES([ELEMENTARY], [elementary])
