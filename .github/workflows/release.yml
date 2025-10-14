@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  dist:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure dpkg to skip docs
+        run: |
+          sudo mkdir -p /etc/dpkg/dpkg.cfg.d
+          echo "path-exclude /usr/share/doc/*" | sudo tee /etc/dpkg/dpkg.cfg.d/01_nodoc
+          echo "path-exclude /usr/share/man/*" | sudo tee -a /etc/dpkg/dpkg.cfg.d/01_nodoc
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            automake \
+            autoconf \
+            pkg-config \
+            libxml2-dev \
+            libefl-all-dev \
+            libeet-bin \
+            libeina-bin
+
+      - name: Generate build system
+        run: autoreconf --install
+
+      - name: Configure project
+        run: ./configure
+
+      - name: Create source tarball (distcheck)
+        run: make distcheck
+
+      - name: Upload source tarball artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: eslide-src-tarball
+          path: eslide-*.tar.gz
+
+  release:
+    runs-on: ubuntu-latest
+    needs: dist
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: eslide-src-tarball
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: eslide-*.tar.gz
+          generate_release_notes: true
+          draft: false
+          prerelease: false
