@@ -2,7 +2,7 @@ SUBDIRS = src
 
 EXTRA_DIST = data/eslide.png data/eslide.desktop
 
-icondir = $(datadir)/icons/hicolor/48x_48/apps
+icondir = $(datadir)/icons/hicolor/48x48/apps
 icon_DATA = data/eslide.png
 
 desktopdir = $(datadir)/applications
