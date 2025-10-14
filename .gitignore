@@ -1,6 +1,33 @@
+# Existing user entries
 *.o
 images/
 .DS_Store
 .vscode/
 eslide
 eslide.cfg
+
+# Autotools generated files
+aclocal.m4
+autom4te.cache/
+configure
+config.guess
+config.h
+config.h.in
+config.log
+config.status
+config.sub
+depcomp
+install-sh
+ltmain.sh
+Makefile
+Makefile.in
+missing
+stamp-h1
+m4/
+build/
+
+# Object files and binaries
+*.lo
+*.la
+.deps/
+src/eslide
