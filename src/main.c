@@ -1,3 +1,4 @@
+#include "app_config.h"
 #include "common.h"
 #include "ui.h"
 #include "media.h"
@@ -5,7 +6,6 @@
 #include "clock.h"
 #include "weather.h"
 #include "news.h"
-#include "config.h"
 
 
 EAPI_MAIN int elm_main(int argc, char** argv)
