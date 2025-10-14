@@ -5,7 +5,7 @@
 #include <Ecore_Getopt.h>
 #include <Eet.h>
 #include "common.h"
-#include "config.h"
+#include "app_config.h"
 
 App_Config config_defaults(void)
 {

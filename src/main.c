@@ -1,4 +1,4 @@
-#include "config.h"
+#include "app_config.h"
 #include "common.h"
 #include "ui.h"
 #include "media.h"
